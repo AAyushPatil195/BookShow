@@ -93,3 +93,44 @@ export const addShow = async (req, res) => {
         res.json({success: false, message: error.message})
     }
 }
+
+// Api to get all shows from DataBase
+export const getAllShows = async (req, res) => {
+    try {
+        const shows = await Show.find({showDateTime: {$gte: new Date()}}) // gte => Greaterthen
+                                .populate('movie')  // populates entire movie document to it
+                                .sort({showDateTime: 1})  // Guves all shows in ascendin order
+        
+        // Filter unique shows
+        const uniqeShows = new Set(shows.map((show)=>show.movie))
+        
+        res.json({success: true, shows: Array.from(uniqeShows)})
+    } catch (error) {
+        console.log(error);
+        res.send({success: false, message: error.message})
+    }
+}
+
+// Apinto get single show from DB
+export const getShow = async (req, res) => {
+    try {
+        const { movieId } = req.params;
+        // get all upcoming shows
+        const shows = await Show.find({movie: movieId, showDateTime: {$gte: new Date()} })
+        const movie = await Movie.findById(movieId)
+        const dateTime = {};
+
+        shows.forEach((show) => {
+            const date = show.showDateTime.toISOString().split("T")[0];
+            if(!dateTime[date]){
+                dateTime[date] = []
+            }
+            dateTime[date].push({ time: show.showDateTime, showId: show._id })
+        })
+        res.json({success: true, movie, dateTime})
+        
+    } catch (error) {
+        console.log(error);
+        res.send({success: false, message: error.message})
+    }
+}
