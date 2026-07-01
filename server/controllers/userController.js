@@ -25,8 +25,8 @@ export const getUserBookings = async (req, res) => {
 // API controller function to add/remove favourite movie in CLERK User METADATA
 export const updateFavorite = async (req, res) => {
     try {
-        const { movieId } = req.body();
-        const userId = req.auth().userId;
+        const movieId = req.body.movieId;
+        const { userId } = req.auth();
         const user = await clerkClient.users.getUser(userId);
 
         if(!user.privateMetadata.favourites) user.privateMetadata.favourites = []

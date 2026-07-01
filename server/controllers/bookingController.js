@@ -26,7 +26,7 @@ export const createBooking = async (req, res) => {
         const { origin } = req.headers;
         // check seats availability 
         const isAvailable = await checkSeatsAvailibility(showId, selectedSeats)
-        if(isAvailable) return res.json({ success: false, message: 'Selected seats are not available'});
+        if(!isAvailable) return res.json({ success: false, message: 'Selected seats are not available'});
 
         const showData = await Show.findById(showId).populate('movie');
 
