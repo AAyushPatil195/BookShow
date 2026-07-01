@@ -46,7 +46,7 @@ export const AppProvider = ({ children }) => {
 
     const fetchShows = async () => {
         try {
-            const { data } = await axios.get('/api/show/all')
+            const { data } = await axios.get('/api/show/all-shows')
             if(data.success){
                 setShows(data.shows)
             }else{
