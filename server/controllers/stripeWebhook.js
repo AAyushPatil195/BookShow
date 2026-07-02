@@ -8,7 +8,7 @@ export const stripeWebhook = async (request, response) => {
     let event;
 
     try {
-        event = stripeInstance.webhooks.constructEvent(request.body, sig, proccess.env.STRIPE_WEBHOOK_SECRET)
+        event = stripeInstance.webhooks.constructEvent(request.body, sig, process.env.STRIPE_WEBHOOK_SECRET)
     } catch (error) {
         return response.status(400).send(`webhook error: ${error.message}`)
     }
@@ -35,7 +35,7 @@ export const stripeWebhook = async (request, response) => {
             }
         }
 
-        response.json({recieved: true})
+        response.json({received: true})
     } catch (error) {
         console.log("Webhook process error: ", error)
         response.status(500).send('Internal sever error')
