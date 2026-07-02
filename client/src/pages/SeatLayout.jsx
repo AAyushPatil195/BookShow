@@ -94,8 +94,10 @@ const SeatLayout = () => {
                         )
 
       if(data.success){
-        toast.success(data.message)
-        naviagte('/my-bookings')
+        // toast.success(data.message)
+        // naviagte('/my-bookings')
+        window.location.href = data.url;
+        
       } else{
         toast.error(data.message)
       }
