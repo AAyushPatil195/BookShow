@@ -2,6 +2,7 @@ import axios from 'axios'
 import Movie from '../models/Movie.js';
 import Show from '../models/Show.js';
 
+import redis, { CACHE_KEYS } from "../configs/redis.js";
 
 // API to get now playing movies from TMDB API
 export const getNowPlayingMovies = async (req, res) => {
@@ -86,6 +87,13 @@ export const addShow = async (req, res) => {
 
         if(showsToCreate.length > 0){
             await Show.insertMany(showsToCreate)
+
+            // Redis
+            try {
+                await redis.del(CACHE_KEYS.UPCOMING_SHOWS);
+            } catch (redisError) {
+                console.warn("Redis cache invalidation failed:", redisError.message);
+            }
         }
         res.json({success: true, message: 'Show added successfully'})
     } catch (error) {
@@ -95,21 +103,79 @@ export const addShow = async (req, res) => {
 }
 
 // Api to get all shows from DataBase
+// export const getAllShows = async (req, res) => {
+//     try {
+//         const shows = await Show.find({showDateTime: {$gte: new Date()}}) // gte => Greaterthen
+//                                 .populate('movie')  // populates entire movie document to it
+//                                 .sort({showDateTime: 1})  // Guves all shows in ascendin order
+        
+//         // Filter unique shows
+//         const uniqeShows = new Set(shows.map((show)=>show.movie))
+        
+//         res.json({success: true, shows: Array.from(uniqeShows)})
+//     } catch (error) {
+//         console.log(error);
+//         res.send({success: false, message: error.message})
+//     }
+// }
+
 export const getAllShows = async (req, res) => {
     try {
-        const shows = await Show.find({showDateTime: {$gte: new Date()}}) // gte => Greaterthen
-                                .populate('movie')  // populates entire movie document to it
-                                .sort({showDateTime: 1})  // Guves all shows in ascendin order
-        
-        // Filter unique shows
-        const uniqeShows = new Set(shows.map((show)=>show.movie))
-        
-        res.json({success: true, shows: Array.from(uniqeShows)})
+        // 1. Try Redis first
+        try {
+            const cachedShows = await redis.get(CACHE_KEYS.UPCOMING_SHOWS);
+
+            if (cachedShows) {
+                res.set("X-Cache", "HIT");
+                return res.json({
+                    success: true,
+                    shows: cachedShows
+                });
+            }
+        } catch (redisError) {
+            console.warn("Redis read failed:", redisError.message);
+        }
+
+        // 2. Cache miss: query MongoDB
+        const shows = await Show.find({
+            showDateTime: { $gte: new Date() }
+        })
+            .populate("movie")
+            .sort({ showDateTime: 1 });
+
+        const uniqueShows = Array.from(
+            new Map(
+                shows.map(show => [
+                    show.movie._id.toString(),
+                    show.movie
+                ])
+            ).values()
+        );
+
+        // 3. Cache for five minutes
+        try {
+            await redis.set(
+                CACHE_KEYS.UPCOMING_SHOWS,
+                uniqueShows,
+                { ex: 300 }
+            );
+        } catch (redisError) {
+            console.warn("Redis write failed:", redisError.message);
+        }
+
+        res.set("X-Cache", "MISS");
+        return res.json({
+            success: true,
+            shows: uniqueShows
+        });
     } catch (error) {
-        console.log(error);
-        res.send({success: false, message: error.message})
+        console.error(error);
+        return res.json({
+            success: false,
+            message: error.message
+        });
     }
-}
+};
 
 // Apinto get single show from DB
 export const getShow = async (req, res) => {
