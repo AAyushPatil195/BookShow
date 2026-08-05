@@ -2,26 +2,41 @@ import { inngest } from "../inngest/index.js";
 import Booking from "../models/Booking.js";
 import Show from "../models/Show.js"
 import stripe from 'stripe'
+import mongoose from "mongoose";
 
 import {
     acquireBookingLock,
     releaseBookingLock
 } from "../services/bookingLockService.js";
 
-// Function to check availibilty of selected seats
-const checkSeatsAvailibility = async (showId, selectedSeats) => {
+// Function to check availability of selected seats
+const checkSeatsAvailibility = async (showId, selectedSeats, session = null) => {
     try {
-        const showData = await Show.findById(showId);
-        if(!showData) return false;
+        const query = Show.findById(showId);
+
+        if (session) {
+            query.session(session);
+        }
+
+        const showData = await query;
+        if (!showData) return false;
 
         const occupiedSeats = showData.occupiedSeats;
-        const isAnySeatTaken = selectedSeats.some(seat => occupiedSeats[seat])
-        // if(isAnySeatTaken) return false;
-        // return true;
+        const isAnySeatTaken = selectedSeats.some(
+            seat => occupiedSeats[seat]
+        );
+
         return !isAnySeatTaken;
     } catch (error) {
         console.log(error.message);
         return false;
+    }
+};
+
+class BookingRequestError extends Error {
+    constructor(message, statusCode) {
+        super(message);
+        this.statusCode = statusCode;
     }
 }
 
@@ -31,14 +46,14 @@ const checkSeatsAvailibility = async (showId, selectedSeats) => {
 //         const { userId } = req.auth();
 //         const { showId, selectedSeats } = req.body;
 //         const { origin } = req.headers;
-//         // check seats availability 
+//         // check seats availability
 //         const isAvailable = await checkSeatsAvailibility(showId, selectedSeats)
 //         if(!isAvailable) return res.json({ success: false, message: 'Selected seats are not available'});
 
 //         const showData = await Show.findById(showId).populate('movie');
 
 //         //creat a new booking
-//         const  booking = await Booking.create({
+//         const booking = await Booking.create({
 //             user: userId,
 //             show: showId,
 //             amount: showData.showPrice * selectedSeats.length,
@@ -52,9 +67,9 @@ const checkSeatsAvailibility = async (showId, selectedSeats) => {
 
 //         await showData.save();
 
-//         //Initialise Stripe Gateway 
+//         //Initialise Stripe Gateway
 //         const stripeInstance = new stripe(process.env.STRIPE_SECRET_KEY)
-//             // creating line items for stripe
+//         // creating line items for stripe
 //         const line_items = [{
 //             price_data: {
 //                 currency: 'eur',
@@ -65,7 +80,7 @@ const checkSeatsAvailibility = async (showId, selectedSeats) => {
 //             },
 //             quantity: 1
 //         }]
-//             // Payment session
+//         // Payment session
 //         const session = await stripeInstance.checkout.sessions.create({
 //             success_url: `${origin}/loading/my-bookings`, // Origin -> FE URL
 //             cancel_url: `${origin}/my-bookings`,
@@ -141,48 +156,67 @@ export const createBooking = async (req, res) => {
 
         let showData;
         let booking;
+        let dbSession = null;
 
         /*
-         * Critical section:
-         * only one request for this show can execute this block at a time.
+         * MongoDB transaction:
+         * reserving seats and creating the booking either both succeed or
+         * both roll back. The Redis lock limits concurrent attempts while
+         * MongoDB remains the source of truth.
          */
         try {
-            const isAvailable = await checkSeatsAvailibility(
-                showId,
-                selectedSeats
-            );
+            dbSession = await mongoose.startSession();
 
-            if (!isAvailable) {
-                return res.status(409).json({
-                    success: false,
-                    message: "Selected seats are not available"
+            await dbSession.withTransaction(async () => {
+                const isAvailable = await checkSeatsAvailibility(
+                    showId,
+                    selectedSeats,
+                    dbSession
+                );
+
+                if (!isAvailable) {
+                    throw new BookingRequestError(
+                        "Selected seats are not available",
+                        409
+                    );
+                }
+
+                showData = await Show.findById(showId)
+                    .populate("movie")
+                    .session(dbSession);
+
+                if (!showData) {
+                    throw new BookingRequestError("Show not found", 404);
+                }
+
+                booking = new Booking({
+                    user: userId,
+                    show: showId,
+                    amount: showData.showPrice * selectedSeats.length,
+                    bookedSeats: selectedSeats
                 });
-            }
 
-            showData = await Show.findById(showId).populate("movie");
-
-            if (!showData) {
-                return res.status(404).json({
-                    success: false,
-                    message: "Show not found"
+                selectedSeats.forEach((seat) => {
+                    showData.occupiedSeats[seat] = booking._id.toString();
                 });
-            }
 
-            booking = await Booking.create({
-                user: userId,
-                show: showId,
-                amount: showData.showPrice * selectedSeats.length,
-                bookedSeats: selectedSeats
+                showData.markModified("occupiedSeats");
+
+                await showData.save({ session: dbSession });
+                await booking.save({ session: dbSession });
             });
-
-            selectedSeats.forEach((seat) => {
-                showData.occupiedSeats[seat] = userId;
-            });
-
-            showData.markModified("occupiedSeats");
-            await showData.save();
-
         } finally {
+            if (dbSession) {
+                try {
+                    await dbSession.endSession();
+                } catch (sessionError) {
+                    console.error(
+                        "MongoDB session cleanup failed:",
+                        sessionError.message
+                    );
+                }
+            }
+
             /*
              * This executes for success, return statements and thrown errors.
              * If Redis release fails, the lock still expires after 15 seconds.
@@ -252,9 +286,13 @@ export const createBooking = async (req, res) => {
     } catch (error) {
         console.error("Booking creation failed:", error.message);
 
-        return res.status(500).json({
+        const statusCode = error.statusCode || 500;
+
+        return res.status(statusCode).json({
             success: false,
-            message: "Unable to create booking"
+            message: error.statusCode
+                ? error.message
+                : "Unable to create booking"
         });
     }
 };
