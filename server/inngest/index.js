@@ -3,6 +3,7 @@ import User from "../models/User.js";
 import Booking from "../models/Booking.js";
 import Show from "../models/Show.js";
 import sendEmail from "../configs/nodemailer.js";
+import stripe from "stripe";
 
 // Create a client to send and receive events
 export const inngest = new Inngest({ id: "movie-ticket-booking" });
@@ -59,6 +60,25 @@ const releaseSeatsAndDeleteBookings = inngest.createFunction(
             const booking = await Booking.findById(bookingId)
             // check if paymemt is done, if not release & delete
             if(!booking.isPaid){
+                if(booking.stripeSessionId){
+                    const stripeInstance = new stripe(process.env.STRIPE_SECRET_KEY);
+                    const checkoutSession = await stripeInstance.checkout.sessions.retrieve(
+                        booking.stripeSessionId
+                    );
+
+                    // A completed Checkout Session must not lose its seats while
+                    // the payment webhook is still updating the booking.
+                    if(checkoutSession.status === "complete") return;
+
+                    // Stripe Checkout has a 30-minute minimum expiry. Expire the
+                    // open session manually when the 10-minute seat hold ends.
+                    if(checkoutSession.status === "open"){
+                        await stripeInstance.checkout.sessions.expire(
+                            booking.stripeSessionId
+                        );
+                    }
+                }
+
                 const show = await Show.findById(booking.show);
                 booking.bookedSeats.forEach((seat)=>{
                     delete show.occupiedSeats[seat]
