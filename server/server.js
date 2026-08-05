@@ -10,6 +10,7 @@ import bookingRouter from './routes/bookingRoutes.js';
 import adminRouter from './routes/adminRoutes.js';
 import userRouter from './routes/userRoutes.js';
 import { stripeWebhook } from './controllers/stripeWebhook.js';
+import { apiRateLimiter } from './middleware/rateLimiter.js';
 
 const app = express();
 const port = 3000;
@@ -27,11 +28,11 @@ app.use(clerkMiddleware())
 // API Routes
 app.get('/', (req, res)=> res.send('Hello, Server is live !!!'))
 app.use("/api/inngest", serve({ client: inngest, functions }));
-app.use('/api/show', showRouter);
-app.use('/api/booking', bookingRouter);
+app.use('/api/show', apiRateLimiter, showRouter);
+app.use('/api/booking', apiRateLimiter, bookingRouter);
 // admin
-app.use('/api/admin', adminRouter);
+app.use('/api/admin', apiRateLimiter, adminRouter);
 // user
-app.use('/api/user', userRouter)
+app.use('/api/user', apiRateLimiter, userRouter)
 
 app.listen(port, ()=> console.log(`Server is listening at http://localhost:${port}`))
