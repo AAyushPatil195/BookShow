@@ -22,6 +22,7 @@
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "inngest": "^4.8.0",
+    "kafkajs": "^2.2.4",
     "mongoose": "^9.7.2",
     "nodemailer": "^9.0.3",
     "stripe": "^22.3.0",
