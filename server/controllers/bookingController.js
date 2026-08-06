@@ -4,10 +4,14 @@ import Show from "../models/Show.js"
 import stripe from 'stripe'
 import mongoose from "mongoose";
 
+// Redis seat locking
 import {
     acquireBookingLock,
     releaseBookingLock
 } from "../services/bookingLockService.js";
+
+// Kafka
+import { publishBookingEvent } from "../services/kafkaProducerService.js";
 
 // Function to check availability of selected seats
 const checkSeatsAvailibility = async (showId, selectedSeats, session = null) => {
@@ -278,6 +282,29 @@ export const createBooking = async (req, res) => {
                 bookingId: booking._id.toString()
             }
         });
+
+                /*
+         * Kafka is secondary to the booking flow.
+         * A Kafka failure must not invalidate a successful booking.
+         */
+        try {
+            await publishBookingEvent({
+                type: "booking.created",
+                bookingId: booking._id,
+                payload: {
+                    userId,
+                    showId,
+                    selectedSeats,
+                    amount: booking.amount,
+                    stripeSessionId: session.id
+                }
+            });
+        } catch (kafkaError) {
+            console.error(
+                "Booking event publishing failed:",
+                kafkaError.message
+            );
+        }
 
         return res.json({
             success: true,
