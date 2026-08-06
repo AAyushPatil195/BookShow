@@ -1,0 +1,11 @@
+services:
+  api:
+    build:
+      context: ./server
+    image: quickshow-server:1.0
+    container_name: quickshow-api
+    env_file:
+      - ./server/.env
+    ports:
+      - "3001:3000"
+    restart: unless-stopped
