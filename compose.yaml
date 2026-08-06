@@ -2,7 +2,7 @@ services:
   api:
     build:
       context: ./server
-    image: quickshow-server:1.0
+    image: aayush195/quickshow-server:1.1
     container_name: quickshow-api
     env_file:
       - ./server/.env
@@ -38,7 +38,7 @@ services:
   booking-worker:
     build:
       context: ./server
-    image: quickshow-server:1.0
+    image: aayush195/quickshow-server:1.1
     container_name: quickshow-booking-worker
     env_file:
       - ./server/.env
