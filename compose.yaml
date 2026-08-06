@@ -35,3 +35,18 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_SHARE_COORDINATOR_STATE_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_SHARE_COORDINATOR_STATE_TOPIC_MIN_ISR: 1
+  booking-worker:
+    build:
+      context: ./server
+    image: quickshow-server:1.0
+    container_name: quickshow-booking-worker
+    env_file:
+      - ./server/.env
+    environment:
+      KAFKA_BROKERS: kafka:19092
+      KAFKA_CLIENT_ID: quickshow-booking-worker
+      KAFKA_CONSUMER_GROUP_ID: quickshow-booking-workers
+    depends_on:
+      - kafka
+    command: ["node", "workers/bookingEventsConsumer.js"]
+    restart: unless-stopped

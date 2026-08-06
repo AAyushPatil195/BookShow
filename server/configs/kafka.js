@@ -5,7 +5,7 @@ const brokers = (process.env.KAFKA_BROKERS || "localhost:9092")
     .map((broker) => broker.trim());
 
 const kafka = new Kafka({
-    clientId: "quickshow-api",
+    clientId: process.env.KAFKA_CLIENT_ID || "quickshow-api",
     brokers,
     logLevel: logLevel.WARN
 });
