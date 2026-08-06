@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: quickshow-api
+  namespace: quickshow
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: quickshow-api
+  template:
+    metadata:
+      labels:
+        app: quickshow-api
+    spec:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: quickshow-api
+      containers:
+        - name: api
+          image: aayush195/quickshow-server:1.1
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 3000
+          envFrom:
+            - secretRef:
+                name: quickshow-secrets
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: KAFKA_BROKERS
+              value: kafka:9092
+            - name: KAFKA_CLIENT_ID
+              value: quickshow-api
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          startupProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 5
+            failureThreshold: 30
+          readinessProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 10
+
+---
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: quickshow-api-public
+  namespace: quickshow
+spec:
+  type: LoadBalancer
+  selector:
+    app: quickshow-api
+  ports:
+    - name: http
+      port: 3001
+      targetPort: http

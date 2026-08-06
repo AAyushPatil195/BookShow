@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: quickshow-booking-worker
+  namespace: quickshow
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: quickshow-booking-worker
+  template:
+    metadata:
+      labels:
+        app: quickshow-booking-worker
+    spec:
+      terminationGracePeriodSeconds: 30
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: quickshow-booking-worker
+      containers:
+        - name: booking-worker
+          image: aayush195/quickshow-server:1.1
+          imagePullPolicy: Always
+          command:
+            - node
+            - workers/bookingEventsConsumer.js
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: KAFKA_BROKERS
+              value: kafka:9092
+            - name: KAFKA_CLIENT_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: KAFKA_CONSUMER_GROUP_ID
+              value: quickshow-booking-workers
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
