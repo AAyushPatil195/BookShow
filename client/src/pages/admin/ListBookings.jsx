@@ -35,30 +35,32 @@ const ListBookings = () => {
   return !loading ? (
     <>
       <Title text1="List" text2="Bookings" />
-      <div className='max-w-4xl mt-6 overflow-x-auto'>
-        <table className='w-full border-collapse rounded-md overflow-hidden text-nowrap'>
+      <div className='mt-8 max-w-6xl overflow-hidden rounded-2xl border border-white/8 bg-panel shadow-[0_18px_50px_rgba(0,0,0,0.18)]'>
+      <div className='overflow-x-auto'>
+        <table className='w-full border-collapse text-nowrap'>
             <thead>
-                <tr className='bg-primary/20 text-left text-white'>
-                    <th className='p-2 font-medium pl-5'>User Name</th>
-                    <th className='p-2 font-medium'>Movie Name</th>
-                    <th className='p-2 font-medium'>Show Time</th>
-                    <th className='p-2 font-medium'>Seats</th>
-                    <th className='p-2 font-medium'>Amount</th>
+                <tr className='border-b border-white/8 bg-white/4 text-left text-[11px] uppercase tracking-[0.12em] text-zinc-500'>
+                    <th className='px-5 py-4 font-semibold'>User Name</th>
+                    <th className='px-5 py-4 font-semibold'>Movie Name</th>
+                    <th className='px-5 py-4 font-semibold'>Show Time</th>
+                    <th className='px-5 py-4 font-semibold'>Seats</th>
+                    <th className='px-5 py-4 font-semibold'>Amount</th>
                 </tr>
             </thead>
 
-            <tbody className='text-sm font-light'>
+            <tbody className='divide-y divide-white/6 text-sm'>
                 {bookings.map((item, index) => (
-                    <tr key={index} className='border-b border-primary/20 bg-primary/5 even:bg-primary/10'>
-                        <td className='p-2 min-w-45 pl-5'>{item.user.name}</td>
-                        <td className='p-2'>{item.show.movie.title}</td>
-                        <td className='p-2'>{dateFormat(item.show.showDateTime)}</td>
-                        <td className='p-2'>{Object.keys(item.bookedSeats).map(seat => item.bookedSeats[seat]).join(", ")}</td>
-                        <td className='p-2'>{currency} {item.amount}</td>
+                    <tr key={index} className='text-zinc-300 transition hover:bg-white/3'>
+                        <td className='min-w-48 px-5 py-4 font-medium text-white'>{item.user.name}</td>
+                        <td className='px-5 py-4'>{item.show.movie.title}</td>
+                        <td className='px-5 py-4 text-zinc-400'>{dateFormat(item.show.showDateTime)}</td>
+                        <td className='px-5 py-4'>{Object.keys(item.bookedSeats).map(seat => item.bookedSeats[seat]).join(", ")}</td>
+                        <td className='px-5 py-4 font-semibold'>{currency} {item.amount}</td>
                     </tr>
                 ))}
             </tbody>
         </table>
+      </div>
       </div>
     </>
   ) : (

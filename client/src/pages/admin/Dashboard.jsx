@@ -57,37 +57,45 @@ const Dashboard = () => {
   return !loading ? (
     <>
      <Title text1={"Admin"} text2="Dashboard" />
-     <div className='relative flex flex-wrap gap-4 mt-6'>
+     <div className='relative mt-8 flex flex-wrap gap-4'>
         <BlurCircle top='-100px' left='0' />
-        <div className='flex flex-wrap gap-4 w-full'>
+        <div className='grid w-full grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4'>
             {dashboardCards.map((card, index) => (
-                <div key={index} className='flex items-center justify-between px-4 py-3 bg-primary/10 border border-primary/20 rounded-md max-w-50 w-full'>
+                <div key={index} className='flex w-full items-center justify-between rounded-2xl border border-white/8 bg-panel p-5 shadow-[0_16px_45px_rgba(0,0,0,0.18)] transition hover:border-white/15'>
                     <div>
-                        <h1 className='text-sm'>{card.title}</h1>
-                        <p className='text-xl font-medium mt-1'>{card.value}</p>
+                        <h2 className='text-xs font-medium uppercase tracking-[0.14em] text-zinc-500'>{card.title}</h2>
+                        <p className='mt-2 text-2xl font-semibold'>{card.value}</p>
                     </div>
-                    <card.icon className='w-6 h-6' />
+                    <span className='flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary'>
+                      <card.icon className='h-5 w-5' />
+                    </span>
                 </div>
             ))}
         </div>
     </div> 
 
-    <p className='mt-10 text-lg font-medium'>Active Shows</p>
-    <div className='relative flex flex-wrap gap-6 mt-4 max-w-5xl'>
+    <div className='mt-12 flex items-center justify-between'>
+      <div>
+        <p className='text-xs font-semibold uppercase tracking-[0.2em] text-primary'>Live catalogue</p>
+        <h2 className='mt-1 text-xl font-semibold'>Active Shows</h2>
+      </div>
+      <span className='rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-400'>{dashboardData.activeShows.length} shows</span>
+    </div>
+    <div className='relative mt-6 grid max-w-6xl grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'>
         <BlurCircle top='100px' left='-10%' />
         {dashboardData.activeShows.map((show) => (
-            <div key={show._id} className='w-55 rounded-lg overflow-hidden h-full pb-3 bg-primary/10 border border-primary/20 hover:-translate-y-1 transition duration-300'>
-                <img src={TMDB_image_base_url + show.movie.poster_path} className='h-60 w-full object-cover' alt="" />
-                <p className='font-medium p-2 truncate'>{show.movie.title}</p>
-                <div className='flex items-center justify-between px-2'>
-                    <p className='text-lg font-medium'>{currency} {show.showPrice}</p>
-                    <p className='flex items-center gap-1 text-sm text-gray-400 mt-1 pr-1'>
+            <article key={show._id} className='h-full overflow-hidden rounded-2xl border border-white/8 bg-panel pb-4 transition duration-300 hover:-translate-y-1 hover:border-white/15'>
+                <img src={TMDB_image_base_url + show.movie.poster_path} className='aspect-[4/5] w-full object-cover object-top' alt={show.movie.title} />
+                <p className='truncate px-4 pt-4 font-semibold'>{show.movie.title}</p>
+                <div className='flex items-center justify-between px-4 pt-3'>
+                    <p className='text-lg font-semibold'>{currency} {show.showPrice}</p>
+                    <p className='flex items-center gap-1 text-sm text-zinc-400'>
                         <StarIcon className='w-4 h-4 text-primary fill-primary' />
                         {show.movie.vote_average}
                     </p>
                 </div>
-                <p className='px-2 pt-2 text-sm text-gray-500'>{dateFormat(show.showDateTime)}</p>
-            </div>
+                <p className='px-4 pt-2 text-xs text-zinc-500'>{dateFormat(show.showDateTime)}</p>
+            </article>
         ))}
     </div>
     </>

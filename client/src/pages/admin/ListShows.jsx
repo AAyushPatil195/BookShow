@@ -45,28 +45,30 @@ const ListShows = () => {
   return !loading ? (
     <>
        <Title text1="List" text2="Shows" /> 
-       <div className='max-w-4xl mt-6 overflow-x-auto'>
-        <table className='w-full border-collapse rounded-md overflow-hidden text-nowrap'>
+       <div className='mt-8 max-w-5xl overflow-hidden rounded-2xl border border-white/8 bg-panel shadow-[0_18px_50px_rgba(0,0,0,0.18)]'>
+       <div className='overflow-x-auto'>
+        <table className='w-full border-collapse text-nowrap'>
             <thead>
-                <tr className='bg-primary/20 text-left text-white'>
-                    <th className='p-2 font-medium pl-5'>Movie Name</th>
-                    <th className='p-2 font-medium'>Show Time</th>
-                    <th className='p-2 font-medium'>Total Bookings</th>
-                    <th className='p-2 font-medium'>Earnings</th>
+                <tr className='border-b border-white/8 bg-white/4 text-left text-[11px] uppercase tracking-[0.12em] text-zinc-500'>
+                    <th className='px-5 py-4 font-semibold'>Movie Name</th>
+                    <th className='px-5 py-4 font-semibold'>Show Time</th>
+                    <th className='px-5 py-4 font-semibold'>Total Bookings</th>
+                    <th className='px-5 py-4 font-semibold'>Earnings</th>
                 </tr>
             </thead>
 
-            <tbody className='text-sm font-light'>
+            <tbody className='divide-y divide-white/6 text-sm'>
                 {shows.map((show, index) => (
-                    <tr key={index} className='border-b border-primary/10 bg-primary/5 even:bg-primary/10'>
-                        <td className='p-2 min-w-45 pl-5'>{show.movie.title}</td>
-                        <td className='p-2'>{dateFormat(show.showDateTime)}</td>
-                        <td className='p-2'>{Object.keys(show.occupiedSeats).length}</td>
-                        <td className='p-2'>{currency} {Object.keys(show.occupiedSeats).length * show.showPrice}</td>
+                    <tr key={index} className='text-zinc-300 transition hover:bg-white/3'>
+                        <td className='min-w-52 px-5 py-4 font-medium text-white'>{show.movie.title}</td>
+                        <td className='px-5 py-4 text-zinc-400'>{dateFormat(show.showDateTime)}</td>
+                        <td className='px-5 py-4'>{Object.keys(show.occupiedSeats).length}</td>
+                        <td className='px-5 py-4 font-semibold'>{currency} {Object.keys(show.occupiedSeats).length * show.showPrice}</td>
                     </tr>
                 ))}
             </tbody>
         </table>
+       </div>
        </div>
     </>
   ) : (

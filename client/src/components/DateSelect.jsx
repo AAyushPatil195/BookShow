@@ -16,31 +16,32 @@ const DateSelect = ({dateTime, id}) => {
     }
 
   return (
-    <div id='dateselect' className='pt-30'>
-      <div className='flex flex-col md:flex-row items-center justify-between gap-10 relative p-8 bg-primary/10 border border-primary/20 rounded-lg'>
+    <section id='dateselect' className='scroll-mt-24 pt-24'>
+      <div className='relative flex flex-col items-stretch justify-between gap-8 overflow-hidden rounded-3xl border border-white/10 bg-panel p-6 shadow-[0_24px_80px_rgba(0,0,0,0.3)] sm:p-8 md:flex-row md:items-end lg:p-10'>
        <BlurCircle top='-100px' left='-100px' />
        <BlurCircle top='100px' right='0px' />
        <div>
-        <p className='text-lg font-semibold'>Choose Date</p>
-        <div className='flex items-center gap-6 text-sm mt-5'>
-            <ChevronLeftIcon width={28} />
-            <span className='grid grid-cols-3 md:flex flex-wrap md:max-w-lg gap-4'>
+        <p className='text-xs font-semibold uppercase tracking-[0.22em] text-primary'>Select your show</p>
+        <h2 className='mt-2 text-2xl font-semibold'>Choose a date</h2>
+        <div className='mt-6 flex items-center gap-2 text-sm sm:gap-4'>
+            <ChevronLeftIcon width={24} className='shrink-0 text-zinc-500' />
+            <span className='grid flex-1 grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:gap-3'>
                 {Object.keys(dateTime).map((date)=>(
-                    <button onClick={()=>setSelected(date)} key={date} className={`flex flex-col items-center justify-center h-14 w-14 aspect-square rounded cursor-pointer ${selected === date ? "bg-primary text-white" : "border border-primary/70"}`}>
-                        <span>{new Date(date).getDate()}</span>
-                        <span>{new Date(date).toLocaleString("en-US", {month: "short"})}</span>
+                    <button onClick={()=>setSelected(date)} key={date} className={`flex h-16 min-w-16 flex-col items-center justify-center rounded-xl border transition cursor-pointer ${selected === date ? "border-primary bg-primary text-white shadow-lg shadow-primary/20" : "border-white/10 bg-white/5 text-zinc-300 hover:border-primary/50 hover:bg-white/8"}`}>
+                        <span className='text-lg font-semibold leading-none'>{new Date(date).getDate()}</span>
+                        <span className='mt-1 text-[10px] font-semibold uppercase tracking-wider'>{new Date(date).toLocaleString("en-US", {month: "short"})}</span>
                     </button>
                 ))}
             </span>
-            <ChevronRightIcon width={28} />
+            <ChevronRightIcon width={24} className='shrink-0 text-zinc-500' />
         </div>
        </div>
-       <button onClick={onBookHandler} className='bg-primary text-white px-8 py-2 mt-6 rounded hover:bg-primary/90 transition-all cursor-pointer'>
+       <button onClick={onBookHandler} className='shrink-0 rounded-xl bg-primary px-8 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/20 transition hover:bg-primary-dull active:scale-95 cursor-pointer'>
         {/* Book Now */}
         Book Now
        </button>
       </div>
-    </div>
+    </section>
   )
 }
 

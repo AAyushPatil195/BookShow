@@ -59,65 +59,85 @@ const MovieDetails = () => {
   }, [id])
 
   return show ? (
-    <div className='px-6 md:px-16 lg:px-40 pt-30 md:pt-50'>
-      <div className='flex flex-col md:flex-row gap-8 max-w-6xl mx-auto'>
+    <main className='relative overflow-hidden pb-20'>
+      <div className='absolute inset-x-0 top-0 -z-20 h-[680px] overflow-hidden'>
+        <img src={TMDB_image_base_url + show.movie.backdrop_path} alt='' className='h-full w-full object-cover opacity-25 blur-[2px]' />
+        <div className='absolute inset-0 bg-gradient-to-b from-black/45 via-canvas/85 to-canvas' />
+      </div>
+
+      <div className='mx-auto max-w-7xl px-6 pt-36 sm:px-8 md:pt-44 lg:px-12'>
+      <div className='flex flex-col gap-10 md:flex-row md:items-end lg:gap-14'>
         {/* Movie poster & details */}
-        <img src={TMDB_image_base_url + show.movie.poster_path} alt="Movie Poster" className='max-md:mx-auto rounded-xl h-104 max-w-70 object-cover' />
-        <div className='relative flex flex-col gap-3'>
+        <div className='mx-auto shrink-0 md:mx-0'>
+          <img src={TMDB_image_base_url + show.movie.poster_path} alt={`${show.movie.title} poster`} className='aspect-[2/3] w-64 rounded-2xl border border-white/10 object-cover shadow-[0_28px_80px_rgba(0,0,0,0.55)] sm:w-72' />
+        </div>
+        <div className='relative flex max-w-2xl flex-col'>
           <BlurCircle top='-100px' left='-100px' />
-          <p className='text-primary'>ENGLISH</p>
-          <h1 className='text-4xl font-semibold max-w-96 text-balance'>{show.movie.title}</h1>
-          <div className='flex items-center gap-2 text-gray-300'>
+          <p className='text-xs font-semibold uppercase tracking-[0.24em] text-primary'>{show.movie.original_language || 'English'}</p>
+          <h1 className='mt-3 max-w-2xl text-balance text-4xl font-semibold tracking-[-0.035em] sm:text-5xl lg:text-6xl'>{show.movie.title}</h1>
+          <div className='mt-5 flex flex-wrap items-center gap-3 text-sm text-zinc-300'>
             {/* Star icon & rating */}
-            <StarIcon className='w-5 h-5 text-primary fill-primary' />
-            {show.movie.vote_average} User Rating
+            <span className='flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/7 px-3 py-1.5'>
+              <StarIcon className='w-4 h-4 text-primary fill-primary' />
+              {show.movie.vote_average} User Rating
+            </span>
+            <span>{timeFormat(show.movie.runtime)}</span>
+            <span className='h-1 w-1 rounded-full bg-zinc-600' />
+            <span>{show.movie.release_date.split("-")[0]}</span>
           </div>
-          <p className='text-gray-400 mt-2 text-sm leading-tight max-w-xl'>{show.movie.overview}</p>
-          <p>
-            {timeFormat(show.movie.runtime)} - {show.movie.genres.map(genre => genre.name).join(", ")} - {show.movie.release_date.split("-")[0]}
-          </p>
+          <p className='mt-5 max-w-xl text-sm leading-7 text-zinc-400'>{show.movie.overview}</p>
+          <div className='mt-4 flex flex-wrap gap-2'>
+            {show.movie.genres.map(genre => (
+              <span key={genre.id} className='rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs text-zinc-400'>{genre.name}</span>
+            ))}
+          </div>
           
-          <div className='flex items-center flex-wrap gap-4 mt-4'>
+          <div className='mt-7 flex flex-wrap items-center gap-3'>
             {/* Trailer & Ticket & Fav */}
-            <button className='flex items-center gap-2 px-7 py-3 text-sm bg-gray-800 hover:bg-gray-900 transition rounded-md font-medium cursor-pointer active:scale-95'>
+            <button className='flex items-center gap-2 rounded-xl border border-white/10 bg-white/8 px-5 py-3 text-sm font-semibold transition hover:bg-white/12 active:scale-95 cursor-pointer'>
               <PlayCircleIcon className='w-5 h-5' /> Watch Trailer
             </button>
-            <a href="#dateselect" className='px-10 py-3 text-sm bg-primary hover:bg-primary-dull transition rounded-md font-medium cursor-pointer active:scale-95' >Buy Tickets</a>
-            <button onClick={handleFavorite} className='bg-gray-700 p-2.5 rounded-full transition cursor-pointer active:scale-95'>
-              <Heart  className={`w-5 h-5 ${favouriteMovies.find((movie) => movie._id === id) ? 'fill-primary text-primary' : ''}`} />
+            <a href="#dateselect" className='rounded-xl bg-primary px-7 py-3 text-sm font-semibold shadow-lg shadow-primary/20 transition hover:bg-primary-dull active:scale-95 cursor-pointer'>Buy Tickets</a>
+            <button onClick={handleFavorite} aria-label='Add to favourites' className='rounded-xl border border-white/10 bg-white/8 p-3 transition hover:bg-white/12 active:scale-95 cursor-pointer'>
+              <Heart className={`w-5 h-5 ${favouriteMovies.find((movie) => movie._id === id) ? 'fill-primary text-primary' : 'text-zinc-300'}`} />
             </button>
           </div>
-
         </div>
       </div>
 
-      <p className='text-lg font-medium mt-20'>Movie Cast</p>
-      <div className='overflow-x-auto no-scrollbar mt-8 pb-4'>
-        {/* List of Cast */}
-        <div className='flex items-center gap-4 w-max px-4'>
-          {show.movie.casts.slice(0, 12).map((cast, index)=>(
-            <div key={index} className='flex flex-col items-center text-center'>
-              <img src={TMDB_image_base_url + cast.profile_path} alt="" className='rounded-full h-20 md:h-20 aspect-square object-cover' />
-              <p className='font-medium text-xs mt-3'>{cast.name}</p>
-            </div>
-          ))}
+      <section className='mt-24'>
+        <p className='text-xs font-semibold uppercase tracking-[0.22em] text-primary'>Meet the cast</p>
+        <h2 className='mt-2 text-2xl font-semibold tracking-tight'>Movie Cast</h2>
+        <div className='no-scrollbar mt-7 overflow-x-auto pb-4'>
+          {/* List of Cast */}
+          <div className='flex w-max items-start gap-5'>
+            {show.movie.casts.slice(0, 12).map((cast, index)=>(
+              <div key={index} className='w-22 text-center'>
+                <img src={TMDB_image_base_url + cast.profile_path} alt={cast.name} className='mx-auto aspect-square h-20 rounded-full border-2 border-white/10 object-cover grayscale-[20%] transition hover:border-primary/60 hover:grayscale-0' />
+                <p className='mt-3 line-clamp-2 text-xs font-medium text-zinc-300'>{cast.name}</p>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      </section>
 
       <DateSelect dateTime={show.dateTime} id={id} />
 
-      <p className='text-lg font-medium mt-20 mb-8'>You may also like</p>
-      <div className='flex flex-wrap max-sm:justify-center gap-8'>
-        {shows.slice(0,4).map((movie, index)=>(
-          <MovieCard movie={movie} key={index} />
-        ))}
-      </div>
+      <section className='mt-24'>
+        <p className='text-xs font-semibold uppercase tracking-[0.22em] text-primary'>More to explore</p>
+        <h2 className='mb-8 mt-2 text-2xl font-semibold tracking-tight'>You may also like</h2>
+        <div className='grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4'>
+          {shows.slice(0,4).map((movie, index)=>(
+            <MovieCard movie={movie} key={index} />
+          ))}
+        </div>
 
-      <div className='flex justify-center mt-20'>
-        <button onClick={()=>{navigate('/movies'); scrollTo(0,0)}} className='px-10 py-3 text-sm bg-primary hover:bg-primary-dull transition rounded-md font-medium cursor-pointer'>Show More</button>
+        <div className='flex justify-center mt-12'>
+          <button onClick={()=>{navigate('/movies'); scrollTo(0,0)}} className='rounded-xl border border-white/10 bg-white/5 px-8 py-3 text-sm font-semibold transition hover:border-primary/40 hover:bg-primary cursor-pointer'>Explore all movies</button>
+        </div>
+      </section>
       </div>
-
-    </div>
+    </main>
   ) : (
     <Loading />
   )

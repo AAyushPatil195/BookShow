@@ -21,25 +21,26 @@ const AdminSidebar = () => {
     ]
 
   return (
-    <div className='h-[calc(100vh-64px)] md:flex flex-col items-center pt-8 max-w-13 md:max-w-60 w-full border-r border-gray-300/20 text-sm'>
-      <img src={user.imageUrl} className='h-9 md:h-14 w-9 md:w-14 rounded-full mx-auto' alt="" />
-      <p className='mt-2 text-base max-md:hidden'>{user.firstName} {user.lastName}</p>
+    <aside className='h-[calc(100vh-72px)] w-full max-w-16 shrink-0 border-r border-white/8 bg-black/20 pt-6 text-sm md:max-w-64'>
+      <img src={user.imageUrl} className='mx-auto h-10 w-10 rounded-xl border border-white/10 object-cover md:h-14 md:w-14 md:rounded-2xl' alt={`${user.firstName} ${user.lastName}`} />
+      <p className='mt-3 text-center text-sm font-semibold max-md:hidden'>{user.firstName} {user.lastName}</p>
+      <p className='mt-0.5 text-center text-[10px] uppercase tracking-[0.18em] text-zinc-600 max-md:hidden'>Administrator</p>
 
-      <div className='w-full'>
+      <nav className='mt-7 w-full space-y-1 px-2 md:px-3'>
         {/* Menu links */}
         {adminNavLinks.map((link, index)=>(
-            <NavLink key={index} to={link.path} end className={({ isActive }) => `relative flex items-center max-md:justify-center gap-2 w-full py-2.5 md:pl-10 first:mt-6 text-gray-400 ${isActive && 'bg-primary/15 text-primary group'}`}>
+            <NavLink key={index} to={link.path} end className={({ isActive }) => `relative flex w-full items-center gap-3 rounded-xl px-3 py-3 text-zinc-500 transition max-md:justify-center md:px-4 ${isActive ? 'bg-primary/12 text-primary' : 'hover:bg-white/5 hover:text-zinc-200'}`}>
                 {({ isActive }) => (
                     <>
-                      <link.icon className='w-5 h-5' />
-                      <p className='max-md:hidden'>{link.name}</p>
-                      <span className={`w-1.5 h-10 rounded-l right-0 absolute ${isActive && 'bg-primary'}`} />
+                      <link.icon className='h-5 w-5 shrink-0' />
+                      <p className='font-medium max-md:hidden'>{link.name}</p>
+                      <span className={`absolute left-0 h-5 w-0.5 rounded-full ${isActive ? 'bg-primary' : 'bg-transparent'}`} />
                     </>
                 )}
             </NavLink>
         ))}
-      </div>
-    </div>
+      </nav>
+    </aside>
   )
 }
 

@@ -51,13 +51,13 @@ const SeatLayout = () => {
   }
 
   const renderSeats = (row, count=9) => (
-    <div key={row} className='flex gap-2 mt-2'>
+    <div key={row} className='mt-2 flex gap-2'>
       <div className='flex flex-wrap items-center justify-center gap-2'>
         {
           Array.from({ length: count }, (_, i) => {
             const seatId = `${row}${i+1}`;
             return (
-              <button key={seatId} className={`h-8 w-8 rounded border border-primary/60 cursor-pointer ${selectedSeats.includes(seatId) && "bg-primary text-white"} ${occupiedSeats.includes(seatId) && "opacity-50"} `} onClick={() => handleSeatClick(seatId)}>
+              <button key={seatId} className={`h-8 w-8 rounded-md border text-[10px] font-medium transition cursor-pointer sm:h-9 sm:w-9 ${selectedSeats.includes(seatId) ? "border-primary bg-primary text-white shadow-md shadow-primary/20" : "border-white/15 bg-white/4 text-zinc-400 hover:border-primary/70 hover:text-white"} ${occupiedSeats.includes(seatId) && "border-zinc-800 bg-zinc-900/80 text-zinc-700 opacity-60"} `} onClick={() => handleSeatClick(seatId)}>
                 {seatId}
               </button>
             )
@@ -117,36 +117,46 @@ const SeatLayout = () => {
   }, [selectedTime])
 
   return show ? (
-    <div className='flex flex-col md:flex-row px-6 md:px-16 lg:px-40 py-30 md:pt-50'>
+    <main className='mx-auto flex min-h-screen max-w-7xl flex-col gap-10 px-6 pb-24 pt-36 sm:px-8 md:flex-row md:pt-44 lg:gap-16 lg:px-12'>
       
       {/* Available Timings */}
-      <div className='w-60 bg-primary/10 border border-primary/20 rounded-lg py-10 h-max md:sticky md:top-30'>
-       <p className='text-lg font-semibold px-6'>Available Timings <br /><span className='text-xs font-light'>( {date} )</span></p>
-       <div className='mt-5 space-y-1'>
+      <aside className='h-max w-full shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-panel shadow-[0_18px_60px_rgba(0,0,0,0.25)] md:sticky md:top-28 md:w-64'>
+       <div className='border-b border-white/8 px-6 py-5'>
+         <p className='text-xs font-semibold uppercase tracking-[0.2em] text-primary'>Showtime</p>
+         <h2 className='mt-1 text-lg font-semibold'>Available Timings</h2>
+         <p className='mt-1 text-xs text-zinc-500'>{date}</p>
+       </div>
+       <div className='space-y-1 p-3'>
         {show.dateTime[date].map((item)=>(
-          <div key={item.time} onClick={()=>setSelectedTime(item)} className={`flex items-center gap-2 px-6 py-2 w-max rounded-r-md cursor-pointer transition ${selectedTime?.time === item.time ? "bg-primary text-white" : "hover:bg-primary/20"}`}>
+          <div key={item.time} onClick={()=>setSelectedTime(item)} className={`flex w-full items-center gap-3 rounded-xl border px-4 py-3 cursor-pointer transition ${selectedTime?.time === item.time ? "border-primary bg-primary text-white shadow-lg shadow-primary/15" : "border-transparent text-zinc-400 hover:border-white/8 hover:bg-white/5 hover:text-white"}`}>
             <ClockIcon className='w-4 h-4' />
-            <p className='text-sm'>{isoTimeFormat(item.time)}</p>
+            <p className='text-sm font-medium'>{isoTimeFormat(item.time)}</p>
           </div>
         ))}
        </div>
-      </div>
+      </aside>
 
       {/* Seat Layout */}
-      <div className='relative flex-1 flex flex-col items-center max-md:mt-16'>
+      <section className='relative flex min-w-0 flex-1 flex-col items-center'>
         <BlurCircle top='-100px' left='-100px' />
         <BlurCircle bottom='0px' right='0px' />
-        <h1 className='text-2xl font-semibold mb-4'>Select your seat</h1>
-        <img src={assets.screenImage} alt="Screen" />
-        <p className='text-gray-400text-sm mb-6'>SCREEN SIDE</p>
+        <p className='text-xs font-semibold uppercase tracking-[0.22em] text-primary'>Your seats</p>
+        <h1 className='mt-2 text-3xl font-semibold tracking-tight'>Select your seat</h1>
+        <p className='mt-2 text-sm text-zinc-500'>Choose up to 5 seats for this show.</p>
 
-        <div className='flex flex-col items-center mt-10 text-xs text-gray-300'>
+        <div className='mt-10 w-full max-w-3xl'>
+          <img src={assets.screenImage} alt="Cinema screen" className='mx-auto w-full opacity-80' />
+          <p className='mt-2 text-center text-[10px] font-semibold uppercase tracking-[0.35em] text-zinc-600'>Screen this way</p>
+        </div>
 
-          <div className='grid grid-cols-2 md:grid-cols-1 gap-8 md:gap-2 mb-6'>
+        <div className='no-scrollbar mt-10 w-full overflow-x-auto pb-4'>
+        <div className='mx-auto flex w-max min-w-[620px] flex-col items-center px-4 text-xs text-zinc-300'>
+
+          <div className='mb-6 grid grid-cols-2 gap-10 md:grid-cols-1 md:gap-2'>
             {groupRows[0].map(row => renderSeats(row))}
           </div>
 
-          <div className='grid grid-cols-2 gap-11'>
+          <div className='grid grid-cols-2 gap-12'>
             {groupRows.slice(1).map((group, ind)=>(
               <div key={ind}>
                 {group.map(row => renderSeats(row))}
@@ -155,15 +165,22 @@ const SeatLayout = () => {
           </div>
 
         </div>
+        </div>
 
-        <button onClick={bookTickets} className={`flex items-center gap-1 mt-20 px-10 py-3 text-sm bg-primary hover:bg-primary-dull transition rounded-full font-medium cursor-pointer active:scale-95 ${selectedSeats.length===0 ? "hidden" : ""}`}>
-          Proceed to checkout
+        <div className='mt-6 flex flex-wrap justify-center gap-5 text-xs text-zinc-500'>
+          <span className='flex items-center gap-2'><span className='h-3 w-3 rounded-sm border border-white/20 bg-white/5' /> Available</span>
+          <span className='flex items-center gap-2'><span className='h-3 w-3 rounded-sm bg-primary' /> Selected</span>
+          <span className='flex items-center gap-2'><span className='h-3 w-3 rounded-sm bg-zinc-800' /> Occupied</span>
+        </div>
+
+        <button onClick={bookTickets} className={`mt-10 flex items-center gap-2 rounded-xl bg-primary px-8 py-3.5 text-sm font-semibold shadow-lg shadow-primary/20 transition hover:bg-primary-dull active:scale-95 cursor-pointer ${selectedSeats.length===0 ? "hidden" : ""}`}>
+          Proceed to checkout · {selectedSeats.length} {selectedSeats.length === 1 ? 'seat' : 'seats'}
           <ArrowRightIcon strokeWidth={3} className='w-4 h-4' />
         </button>
 
-      </div>
+      </section>
 
-    </div>
+    </main>
   ) : (
     <Loading />
   )

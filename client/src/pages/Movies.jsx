@@ -9,12 +9,15 @@ const Movies = () => {
   const { shows } = useAppContext();
 
   return shows.length > 0 ? (
-    <div className='relative my-40 mb-60 px-6 md:px-16 lg:px-40 xl:px-44 overflow-hidden min-h-[80vh]'>
+    <main className='relative min-h-[80vh] overflow-hidden px-6 pb-24 pt-36 sm:px-8 md:pt-44 lg:px-12'>
 
       <BlurCircle top='150px' left='0px' />
       <BlurCircle bottom='150px' right='0px' />
-      <h1 className='text-lg font-medium my-4'>Now Showing</h1>
-      <div className='flex flex-wrap max-sm:justify-center gap-8'>
+      <div className='mx-auto max-w-7xl'>
+      <p className='text-xs font-semibold uppercase tracking-[0.24em] text-primary'>Discover</p>
+      <h1 className='mt-2 text-3xl font-semibold tracking-tight sm:text-4xl'>Now Showing</h1>
+      <p className='mt-3 max-w-xl text-sm leading-6 text-zinc-400'>Explore the latest releases and find your next big-screen experience.</p>
+      <div className='mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'>
         {/* List of movies */}
         {/* {dummyShowsData.map((movie)=>(
           <MovieCard movie={movie} key={movie._id} />
@@ -23,12 +26,16 @@ const Movies = () => {
           <MovieCard movie={movie} key={movie._id} />
         ))}
       </div>
-    </div>
+      </div>
+    </main>
   ) : (
-    <div className='flex flex-col items-center justify-center h-screen'>
+    <main className='flex min-h-screen flex-col items-center justify-center px-6 text-center'>
       {/* In case no movies are available */}
-      <h1 className='text-3xl font-bold text-center'>Oops!!! <br /> No Movies Available</h1>
-    </div>
+      <span className='mb-5 h-2 w-2 rounded-full bg-primary shadow-[0_0_25px_rgba(248,69,101,0.9)]' />
+      <p className='text-xs font-semibold uppercase tracking-[0.24em] text-primary'>Coming soon</p>
+      <h1 className='mt-3 text-3xl font-semibold tracking-tight'>No movies available</h1>
+      <p className='mt-3 max-w-sm text-sm text-zinc-500'>New shows are being prepared. Check back shortly for the next screening.</p>
+    </main>
   )
 }
 

@@ -8,17 +8,39 @@
 @theme{
   --color-primary: #F84565;
   --color-primary-dull: #D63854;
+  --color-canvas: #09090B;
+  --color-panel: #121217;
+  --color-panel-light: #19191F;
 }
 
 *{
   font-family: "Outfit", sans-serif;
   scrollbar-width: thin;
-  scrollbar-color: #787777 #1e1e1e;
+  scrollbar-color: #52525b #18181b;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  background-color: #09090B;
 }
 
 body{
   color: white;
   background-color: #09090B;
+  min-width: 320px;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+::selection {
+  color: white;
+  background-color: #F84565;
 }
 
 .no-scrollbar{

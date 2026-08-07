@@ -3,41 +3,45 @@ import { assets } from '../assets/assets'
 
 const Footer = () => {
   return (
-     <footer className="px-6 mt-40 md:px-16 lg:px-36 w-full text-gray-300">
-            <div className="flex flex-col md:flex-row justify-between w-full gap-10 border-b border-gray-500 pb-14">
-                <div className="md:max-w-96">
-                    <img alt="" className="h-11" src={assets.logo} />
-                    <p className="mt-6 text-sm">
-                        Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book.
-                    </p>
-                    <div className="flex items-center gap-2 mt-4">
-                        <img src={assets.googlePlay} alt="google play" className="h-9 w-auto" />
-                        <img src={assets.appStore} alt="app store" className="h-9 w-auto" />
-                    </div>
-                </div>
-                <div className="flex-1 flex items-start md:justify-end gap-20 md:gap-40">
-                    <div>
-                        <h2 className="font-semibold mb-5">Company</h2>
-                        <ul className="text-sm space-y-2">
-                            <li><a href="#">Home</a></li>
-                            <li><a href="#">About us</a></li>
-                            <li><a href="#">Contact us</a></li>
-                            <li><a href="#">Privacy policy</a></li>
-                        </ul>
-                    </div>
-                    <div>
-                        <h2 className="font-semibold mb-5">Get in touch</h2>
-                        <div className="text-sm space-y-2">
-                            <p>+91-234-567-890</p>
-                            <p>contact@example.com</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <p className="pt-4 text-center text-sm pb-5">
-                Copyright {new Date().getFullYear()} © <a href="https://prebuiltui.com">QuickShow</a>. All Right Reserved.
+    <footer className='mt-28 w-full border-t border-white/8 bg-black/25 px-6 text-zinc-400 sm:px-8 lg:px-12'>
+      <div className='mx-auto max-w-7xl'>
+        <div className='flex w-full flex-col justify-between gap-12 border-b border-white/8 py-14 md:flex-row'>
+          <div className='md:max-w-96'>
+            <img alt='QuickShow' className='h-10' src={assets.logo} />
+            <p className='mt-5 text-sm leading-6 text-zinc-500'>
+              Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book.
             </p>
-        </footer>
+            <div className='mt-5 flex items-center gap-2'>
+              <img src={assets.googlePlay} alt='Google Play' className='h-9 w-auto opacity-80 transition hover:opacity-100' />
+              <img src={assets.appStore} alt='App Store' className='h-9 w-auto opacity-80 transition hover:opacity-100' />
+            </div>
+          </div>
+
+          <div className='flex flex-1 items-start gap-14 sm:gap-24 md:justify-end lg:gap-36'>
+            <div>
+              <h2 className='mb-5 font-semibold text-white'>Company</h2>
+              <ul className='space-y-3 text-sm'>
+                <li><a className='transition hover:text-white' href='#'>Home</a></li>
+                <li><a className='transition hover:text-white' href='#'>About us</a></li>
+                <li><a className='transition hover:text-white' href='#'>Contact us</a></li>
+                <li><a className='transition hover:text-white' href='#'>Privacy policy</a></li>
+              </ul>
+            </div>
+            <div>
+              <h2 className='mb-5 font-semibold text-white'>Get in touch</h2>
+              <div className='space-y-3 text-sm'>
+                <p>+91-234-567-890</p>
+                <p>contact@example.com</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <p className='py-5 text-center text-xs text-zinc-600'>
+          Copyright {new Date().getFullYear()} © <a className='transition hover:text-zinc-300' href='https://prebuiltui.com'>QuickShow</a>. All Right Reserved.
+        </p>
+      </div>
+    </footer>
   )
 }
 

@@ -1,5 +1,5 @@
 import React from 'react'
-import NavBar from './components/NavBar'
+import NavBar from './components/Navbar'
 import { Route, Routes, useLocation } from 'react-router-dom'
 import Home from './pages/Home'
 import Movies from './pages/Movies'
@@ -26,7 +26,13 @@ const App = () => {
 
   return (
     <>
-      <Toaster />
+      <Toaster toastOptions={{
+        style: {
+          background: '#18181b',
+          color: '#ffffff',
+          border: '1px solid rgba(255,255,255,0.1)',
+        }
+      }} />
       {!isAdminRoute && <NavBar />}
       <Routes>
         <Route path="/" element={<Home />} />
@@ -37,7 +43,7 @@ const App = () => {
         <Route path="/loading/:nextUrl" element={<Loading />} />
         <Route path="/favourite" element={<Favourite />} />
         <Route path='/admin/*' element={user ? <Layout /> : (
-          <div className='min-h-screen flex justify-center items-center'>
+          <div className='min-h-screen flex justify-center items-center bg-canvas px-6'>
             <SignIn fallbackRedirectUrl={'/admin'}/>
           </div>
         )}>

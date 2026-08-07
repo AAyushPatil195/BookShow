@@ -5,11 +5,11 @@ import TrailersSecton from '../components/TrailersSecton'
 
 const Home = () => {
   return (
-    <>
+    <main className='overflow-hidden'>
      <HeroSection />
      <FeaturedSection />
      <TrailersSecton />
-    </>
+    </main>
   )
 }
 

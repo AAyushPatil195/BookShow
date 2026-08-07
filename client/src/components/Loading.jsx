@@ -16,8 +16,12 @@ const Loading = () => {
   }, [])
 
   return (
-    <div className='flex justify-center items-center h-[80vh]'>
-        <div className='animate-spin rounded-full h-14 w-14 border-2 border-t-primary'></div>
+    <div className='flex h-[80vh] flex-col items-center justify-center gap-4'>
+        <div className='relative h-14 w-14'>
+          <div className='absolute inset-0 rounded-full border border-white/10'></div>
+          <div className='absolute inset-0 animate-spin rounded-full border-2 border-transparent border-t-primary border-r-primary/40'></div>
+        </div>
+        <p className='text-xs font-medium uppercase tracking-[0.24em] text-zinc-500'>Loading</p>
     </div>
   )
 }

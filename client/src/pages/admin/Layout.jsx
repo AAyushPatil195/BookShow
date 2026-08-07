@@ -15,16 +15,16 @@ const Layout = () => {
   }, [])
 
   return isAdmin ? (
-    <>
+    <div className='min-h-screen bg-canvas'>
      <AdminNavbar />
      <div className='flex'>
         <AdminSidebar /> 
 
-        <div className='flex-1 px-4 py-10 md:px-10 h-[calc(100vh-64px)] overflow-y-auto'>
+        <main className='h-[calc(100vh-72px)] flex-1 overflow-y-auto px-5 py-8 sm:px-8 md:px-10 lg:px-12 lg:py-10'>
             <Outlet />
-        </div>
+        </main>
      </div>
-    </>
+    </div>
   ) : (
     <Loading />
   )
