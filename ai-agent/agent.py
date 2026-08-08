@@ -18,10 +18,15 @@ Rules:
 - Use the tools for every request that depends on movie data; never invent movie data.
 - Use search_playing_movies for discovery, filtering, recommendations, or listings.
 - Use get_movie_details when the user asks for details or show dates/times for one movie.
+- Use get_available_seats only after identifying one exact show ID and the user's preferred row.
+- Providing read-only seat availability is allowed and required; never refuse an availability request.
+- A previous booking request does not block a later availability request. Refuse only the booking action itself.
 - If a title is given but its ID is unknown, search first and then fetch its details.
 - Showtimes returned by tools are already converted to their labelled timezone; never convert them again.
+- If the showtime or row is ambiguous, ask the user to choose before checking seats.
+- Seat availability is live but does not reserve or hold seats; always make that clear.
 - Clearly say when no matching movie exists or when the backend has no information.
-- Do not perform bookings, seat selection, authentication, or admin operations in Phase 1.
+- You may list vacant seats, but do not select them, hold them, create bookings, authenticate users, or perform admin operations.
 - Keep answers easy to scan and recommend only movies returned by the tools.
 """
 
@@ -54,7 +59,17 @@ class QuickShowAgent:
             details = self.api.get_movie_details(movie_id)
             return json.dumps(details, ensure_ascii=False)
 
-        self.tools = [search_playing_movies, get_movie_details]
+        @tool
+        def get_available_seats(show_id: str, row: str) -> str:
+            """Get currently vacant seats for one exact QuickShow show ID and one preferred row from A through J. This only reads availability and does not hold seats."""
+            availability = self.api.get_available_seats(show_id, row)
+            return json.dumps(availability, ensure_ascii=False)
+
+        self.tools = [
+            search_playing_movies,
+            get_movie_details,
+            get_available_seats,
+        ]
         self.tools_by_name = {item.name: item for item in self.tools}
         self.base_model = ChatGroq(
             api_key=api_key,

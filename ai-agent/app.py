@@ -42,8 +42,8 @@ model_name = os.getenv("GROQ_MODEL", "openai/gpt-oss-20b").strip()
 display_timezone = os.getenv("DISPLAY_TIMEZONE", "Asia/Kolkata").strip()
 
 with st.sidebar:
-    st.subheader("Phase 1")
-    st.write("Movie discovery and details")
+    st.subheader("Phases 1–2")
+    st.write("Movie discovery, showtimes, and live seat availability")
     st.caption(f"Backend: {backend_url}")
     st.caption(f"Showtimes: {display_timezone}")
     if st.button("Clear conversation", width="stretch"):
@@ -56,7 +56,7 @@ if "messages" not in st.session_state:
             "role": "assistant",
             "content": (
                 "Hi! Ask me what is playing, or search by title, cast, genre, "
-                "language, or rating."
+                "language, or rating. I can also check live vacant seats by row."
             ),
         }
     ]

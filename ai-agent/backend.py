@@ -1,8 +1,13 @@
 from datetime import datetime, timezone
+import re
 from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import requests
+
+
+SEAT_ROWS = tuple("ABCDEFGHIJ")
+SEATS_PER_ROW = 9
 
 
 class QuickShowAPI:
@@ -22,10 +27,15 @@ class QuickShowAPI:
                 f"Unknown DISPLAY_TIMEZONE: {display_timezone}"
             ) from error
 
-    def _get(self, path: str) -> dict[str, Any]:
+    def _get(
+        self,
+        path: str,
+        params: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         try:
             response = requests.get(
                 f"{self.base_url}{path}",
+                params=params,
                 timeout=self.timeout,
             )
             response.raise_for_status()
@@ -121,6 +131,47 @@ class QuickShowAPI:
                 if member.get("name")
             ],
             "showtimes": showtimes,
+        }
+
+    def get_available_seats(self, show_id: str, row: str) -> dict[str, Any]:
+        safe_show_id = show_id.strip()
+        if not re.fullmatch(r"[0-9a-fA-F]{24}", safe_show_id):
+            raise RuntimeError("A valid show ID is required.")
+
+        safe_row = row.strip().upper()
+        if safe_row not in SEAT_ROWS:
+            raise RuntimeError(
+                f"Invalid row. Choose one of: {', '.join(SEAT_ROWS)}"
+            )
+
+        payload = self._get(
+            f"/api/booking/seats/{safe_show_id}",
+            params={"row": safe_row},
+        )
+
+        row_seats = [f"{safe_row}{number}" for number in range(1, SEATS_PER_ROW + 1)]
+        occupied_seats = {
+            str(seat).upper() for seat in payload.get("occupiedSeats", [])
+        }
+        available_seats = payload.get("availableSeats")
+
+        # Supports the deployed Phase 1 backend until the enhanced endpoint is deployed.
+        if not isinstance(available_seats, list):
+            available_seats = [
+                seat for seat in row_seats if seat not in occupied_seats
+            ]
+
+        return {
+            "show_id": safe_show_id,
+            "row": safe_row,
+            "available_seats": available_seats,
+            "occupied_seats": [
+                seat for seat in row_seats if seat in occupied_seats
+            ],
+            "availability_is_live": True,
+            "notice": (
+                "These seats are not held and may become unavailable before booking."
+            ),
         }
 
     @staticmethod

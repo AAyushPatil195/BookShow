@@ -2,6 +2,7 @@ import { inngest } from "../inngest/index.js";
 import Booking from "../models/Booking.js";
 import Show from "../models/Show.js"
 import stripe from 'stripe'
+import { getSeatsForRow, SEAT_ROWS } from "../configs/seatLayout.js";
 
 // Function to check availibilty of selected seats
 const checkSeatsAvailibility = async (showId, selectedSeats) => {
@@ -95,8 +96,39 @@ export const getOccupiedSeats = async (req, res) => {
     try {
         // const {userId} = req.auth();
         const {showId} = req.params;
+        const rowQuery = typeof req.query.row === 'string' ? req.query.row : '';
+        const requestedRow = rowQuery.trim().toUpperCase();
+
+        if(requestedRow && !SEAT_ROWS.includes(requestedRow)){
+            return res.json({
+                success: false,
+                message: `Invalid row. Choose one of: ${SEAT_ROWS.join(", ")}`
+            });
+        }
+
         const showData = await Show.findById(showId);
-        const occupiedSeats = Object.keys(showData.occupiedSeats)
+        if(!showData){
+            return res.json({success: false, message: 'Show not found'});
+        }
+
+        const occupiedSeats = Object.keys(showData.occupiedSeats || {});
+
+        if(requestedRow){
+            const rowSeats = getSeatsForRow(requestedRow);
+            const occupiedSeatSet = new Set(occupiedSeats);
+            const availableSeats = rowSeats.filter(
+                (seat) => !occupiedSeatSet.has(seat)
+            );
+
+            return res.json({
+                success: true,
+                showId,
+                row: requestedRow,
+                availableSeats,
+                occupiedSeats: rowSeats.filter((seat) => occupiedSeatSet.has(seat)),
+                availabilityIsLive: true
+            });
+        }
 
         return res.json({success: true, occupiedSeats})
 

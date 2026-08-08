@@ -1,4 +1,4 @@
-# QuickShow AI — Phase 1
+# QuickShow AI — Phases 1–2
 
 A separate, read-only Streamlit prototype using LangChain and Groq. It calls the
 existing QuickShow backend and does not connect directly to MongoDB.
@@ -8,7 +8,8 @@ existing QuickShow backend and does not connect directly to MongoDB.
 - List movies currently playing in QuickShow.
 - Search by title, cast, genre, language, or minimum rating.
 - Fetch movie details and available show dates/times.
-- Refuse booking, seat-selection, and admin operations until later phases.
+- Find currently vacant seats in a preferred row for an exact showtime.
+- Refuse seat holds, booking, authentication, and admin operations until later phases.
 
 ## Setup (PowerShell)
 
