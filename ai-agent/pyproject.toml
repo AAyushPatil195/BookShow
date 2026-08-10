@@ -23,3 +23,6 @@ dependencies = [
 
 [tool.setuptools]
 py-modules = ["agent", "api", "app", "backend", "index"]
+
+[tool.vercel]
+entrypoint = "api:app"
