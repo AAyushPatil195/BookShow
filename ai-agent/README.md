@@ -46,6 +46,58 @@ streamlit run app.py
 
 Streamlit normally opens `http://localhost:8501` automatically.
 
+## Private FastAPI service
+
+The integration API reuses the same agent and backend tools as Streamlit. Add a
+long random `AI_SERVICE_SECRET` to `.env`, then run:
+
+```powershell
+uvicorn api:app --reload --port 8000
+```
+
+Health check:
+
+```http
+GET http://localhost:8000/health
+```
+
+Chat requests require the shared secret:
+
+```http
+POST http://localhost:8000/chat
+X-AI-Service-Key: your-shared-secret
+Content-Type: application/json
+
+{
+  "messages": [
+    {"role": "user", "content": "Which movies are currently playing?"}
+  ]
+}
+```
+
+## Node proxy configuration
+
+Add these values to `server/.env`:
+
+```dotenv
+AI_SERVICE_URL=http://127.0.0.1:8000
+AI_SERVICE_SECRET=the_same_value_used_by_the_python_service
+```
+
+The authenticated user-facing endpoint is then:
+
+```http
+POST http://localhost:3000/api/ai/chat
+Authorization: Bearer <Clerk session token>
+Content-Type: application/json
+
+{
+  "messages": [
+    {"role": "user", "content": "Which movies are currently playing?"}
+  ]
+}
+```
+
 ## Architecture
 
 ```text

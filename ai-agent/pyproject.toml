@@ -13,10 +13,13 @@ dependencies = [
     "langchain-core>=1.0,<2.0",
     "langchain-groq>=1.0,<2.0",
     "groq>=0.37,<1.0",
+    "fastapi>=0.115,<1.0",
+    "pydantic>=2.10,<3.0",
     "requests>=2.32,<3.0",
     "python-dotenv>=1.0,<2.0",
     "tzdata>=2025.2,<2027.0",
+    "uvicorn[standard]>=0.30,<1.0",
 ]
 
 [tool.setuptools]
-py-modules = ["agent", "app", "backend"]
+py-modules = ["agent", "api", "app", "backend"]
