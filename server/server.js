@@ -9,6 +9,7 @@ import showRouter from './routes/showRoutes.js';
 import bookingRouter from './routes/bookingRoutes.js';
 import adminRouter from './routes/adminRoutes.js';
 import userRouter from './routes/userRoutes.js';
+import aiRouter from './routes/aiRoutes.js';
 import { stripeWebhook } from './controllers/stripeWebhook.js';
 
 const app = express();
@@ -29,6 +30,7 @@ app.get('/', (req, res)=> res.send('Hello, Server is live !!!'))
 app.use("/api/inngest", serve({ client: inngest, functions }));
 app.use('/api/show', showRouter);
 app.use('/api/booking', bookingRouter);
+app.use('/api/ai', aiRouter);
 // admin
 app.use('/api/admin', adminRouter);
 // user

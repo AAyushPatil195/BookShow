@@ -2,6 +2,7 @@ import { inngest } from "../inngest/index.js";
 import Booking from "../models/Booking.js";
 import Show from "../models/Show.js"
 import stripe from 'stripe'
+import { getSeatsForRow, SEAT_ROWS } from "../configs/seatLayout.js";
 
 // Function to check availibilty of selected seats
 const checkSeatsAvailibility = async (showId, selectedSeats) => {
@@ -23,11 +24,29 @@ const checkSeatsAvailibility = async (showId, selectedSeats) => {
 // Create a booking
 export const createBooking = async (req, res) => {
     try {
-        const { userId } = req.auth();
+        const userId = req.userId;
         const { showId, selectedSeats } = req.body;
         const { origin } = req.headers;
+
+        if(typeof showId !== 'string' || !/^[0-9a-fA-F]{24}$/.test(showId)){
+            return res.status(400).json({success: false, message: 'Invalid show'});
+        }
+        if(!Array.isArray(selectedSeats) || selectedSeats.length < 1 || selectedSeats.length > 5){
+            return res.status(400).json({success: false, message: 'Choose between 1 and 5 seats'});
+        }
+
+        const normalizedSeats = selectedSeats.map((seat) =>
+            typeof seat === 'string' ? seat.trim().toUpperCase() : ''
+        );
+        if(
+            normalizedSeats.some((seat) => !/^[A-J][1-9]$/.test(seat))
+            || new Set(normalizedSeats).size !== normalizedSeats.length
+        ){
+            return res.status(400).json({success: false, message: 'Invalid seat selection'});
+        }
+
         // check seats availability 
-        const isAvailable = await checkSeatsAvailibility(showId, selectedSeats)
+        const isAvailable = await checkSeatsAvailibility(showId, normalizedSeats)
         if(!isAvailable) return res.json({ success: false, message: 'Selected seats are not available'});
 
         const showData = await Show.findById(showId).populate('movie');
@@ -36,11 +55,11 @@ export const createBooking = async (req, res) => {
         const  booking = await Booking.create({
             user: userId,
             show: showId,
-            amount: showData.showPrice * selectedSeats.length,
-            bookedSeats: selectedSeats
+            amount: showData.showPrice * normalizedSeats.length,
+            bookedSeats: normalizedSeats
         });
 
-        selectedSeats.map((seat) => {
+        normalizedSeats.forEach((seat) => {
             showData.occupiedSeats[seat] = userId;
         })
         showData.markModified('occupiedSeats');
@@ -95,8 +114,39 @@ export const getOccupiedSeats = async (req, res) => {
     try {
         // const {userId} = req.auth();
         const {showId} = req.params;
+        const rowQuery = typeof req.query.row === 'string' ? req.query.row : '';
+        const requestedRow = rowQuery.trim().toUpperCase();
+
+        if(requestedRow && !SEAT_ROWS.includes(requestedRow)){
+            return res.json({
+                success: false,
+                message: `Invalid row. Choose one of: ${SEAT_ROWS.join(", ")}`
+            });
+        }
+
         const showData = await Show.findById(showId);
-        const occupiedSeats = Object.keys(showData.occupiedSeats)
+        if(!showData){
+            return res.json({success: false, message: 'Show not found'});
+        }
+
+        const occupiedSeats = Object.keys(showData.occupiedSeats || {});
+
+        if(requestedRow){
+            const rowSeats = getSeatsForRow(requestedRow);
+            const occupiedSeatSet = new Set(occupiedSeats);
+            const availableSeats = rowSeats.filter(
+                (seat) => !occupiedSeatSet.has(seat)
+            );
+
+            return res.json({
+                success: true,
+                showId,
+                row: requestedRow,
+                availableSeats,
+                occupiedSeats: rowSeats.filter((seat) => occupiedSeatSet.has(seat)),
+                availabilityIsLive: true
+            });
+        }
 
         return res.json({success: true, occupiedSeats})
 

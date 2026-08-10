@@ -1,6 +1,13 @@
 node_modules
 .env
 
+# Python / Streamlit
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.streamlit/secrets.toml
+
 # Logs
 logs
 *.log
