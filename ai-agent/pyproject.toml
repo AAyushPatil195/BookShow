@@ -22,4 +22,4 @@ dependencies = [
 ]
 
 [tool.setuptools]
-py-modules = ["agent", "api", "app", "backend"]
+py-modules = ["agent", "api", "app", "backend", "index"]
