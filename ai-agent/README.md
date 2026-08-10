@@ -1,19 +1,20 @@
-# QuickShow AI — Phases 1–2
+# QuickShow AI
 
-A separate, read-only Streamlit prototype using LangChain and Groq. It calls the
-existing QuickShow backend and does not connect directly to MongoDB.
+QuickShow's LangChain and Groq movie assistant. The Python service calls the
+existing Express APIs and never connects directly to MongoDB.
 
 ## Current capabilities
 
-- List movies currently playing in QuickShow.
-- Search by title, cast, genre, language, or minimum rating.
-- Fetch movie details and available show dates/times.
-- Find currently vacant seats in a preferred row for an exact showtime.
-- Refuse seat holds, booking, authentication, and admin operations until later phases.
+- List and search currently playing movies by title, cast, genre, language, or rating.
+- Fetch movie details and timezone-correct showtimes.
+- Find live vacant seats by row.
+- Prepare a validated booking draft for 1-5 seats; React requires `BOOK` before calling Stripe booking APIs.
+- Fetch the signed-in user's three newest bookings with `isPaid` shown as true or false.
+
+Movie, show, booking, and user IDs remain internal. Recent booking records are
+formatted locally and are never sent back to Groq.
 
 ## Setup (PowerShell)
-
-From the repository root:
 
 ```powershell
 cd .\ai-agent
@@ -24,67 +25,40 @@ python -m pip install -e .
 Copy-Item .env.example .env
 ```
 
-Open `.env` and replace `your_groq_api_key` with your Groq API key.
-The default `openai/gpt-oss-20b` model supports Groq tool calling.
-Showtimes default to `Asia/Kolkata`; change `DISPLAY_TIMEZONE` if needed.
-
-Choose one backend:
+Configure `.env`:
 
 ```dotenv
-# Local Node backend (npm run start in server/)
+GROQ_API_KEY=your_groq_api_key
+GROQ_MODEL=openai/gpt-oss-20b
 QUICKSHOW_API_URL=http://localhost:3000
-
-# OR deployed backend; local Node server is not required
-QUICKSHOW_API_URL=https://book-show-server.vercel.app
+DISPLAY_TIMEZONE=Asia/Kolkata
+AI_SERVICE_SECRET=replace_with_a_long_random_secret
 ```
 
-Then run:
+`AI_SERVICE_SECRET` must match the value in `server/.env`.
+
+## Development services
+
+Streamlit playground:
 
 ```powershell
 streamlit run app.py
 ```
 
-Streamlit normally opens `http://localhost:8501` automatically.
-
-## Private FastAPI service
-
-The integration API reuses the same agent and backend tools as Streamlit. Add a
-long random `AI_SERVICE_SECRET` to `.env`, then run:
+Private FastAPI service:
 
 ```powershell
 uvicorn api:app --reload --port 8000
 ```
 
-Health check:
-
-```http
-GET http://localhost:8000/health
-```
-
-Chat requests require the shared secret:
-
-```http
-POST http://localhost:8000/chat
-X-AI-Service-Key: your-shared-secret
-Content-Type: application/json
-
-{
-  "messages": [
-    {"role": "user", "content": "Which movies are currently playing?"}
-  ]
-}
-```
-
-## Node proxy configuration
-
-Add these values to `server/.env`:
+Node proxy configuration in `server/.env`:
 
 ```dotenv
 AI_SERVICE_URL=http://127.0.0.1:8000
 AI_SERVICE_SECRET=the_same_value_used_by_the_python_service
 ```
 
-The authenticated user-facing endpoint is then:
+The browser calls only the Clerk-protected Node endpoint:
 
 ```http
 POST http://localhost:3000/api/ai/chat
@@ -93,18 +67,24 @@ Content-Type: application/json
 
 {
   "messages": [
-    {"role": "user", "content": "Which movies are currently playing?"}
+    {"role": "user", "content": "Show my latest three bookings and payment status."}
   ]
 }
 ```
 
+Express derives the user ID from Clerk and adds it to the private FastAPI
+request. Clients cannot choose which user's booking history is queried.
+
 ## Architecture
 
 ```text
-User -> Streamlit chat -> Groq model -> allowlisted LangChain tools
-                                      -> QuickShow REST API -> MongoDB/Redis
+React widget
+  -> Express + Clerk authentication
+  -> private FastAPI agent
+  -> Groq chooses an allowlisted tool
+  -> QuickShow REST APIs -> MongoDB
 ```
 
-Groq decides which read-only tool is needed. Python executes that tool against
-the existing backend, and the model converts the returned JSON into a concise
-answer. The backend remains the source of truth.
+Booking history follows a stricter path: Groq chooses the no-argument tool,
+then Express fetches the authenticated user's three newest records and Python
+formats them locally without returning private records to Groq.

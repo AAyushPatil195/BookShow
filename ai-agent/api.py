@@ -30,9 +30,14 @@ class ChatMessage(BaseModel):
 
 
 class ChatRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
     messages: Annotated[list[ChatMessage], Field(min_length=1, max_length=12)]
+    user_id: str = Field(
+        alias="userId",
+        pattern=r"^user_[A-Za-z0-9]+$",
+        max_length=128,
+    )
 
     @model_validator(mode="after")
     def latest_message_must_be_from_user(self) -> "ChatRequest":
@@ -41,9 +46,18 @@ class ChatRequest(BaseModel):
         return self
 
 
+class BookingDraftAction(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    type: Literal["booking_draft"]
+    showId: str = Field(pattern=r"^[0-9a-fA-F]{24}$")
+    selectedSeats: Annotated[list[str], Field(min_length=1, max_length=5)]
+
+
 class ChatResponse(BaseModel):
     success: bool = True
     reply: str
+    action: BookingDraftAction | None = None
 
 
 class HealthResponse(BaseModel):
@@ -85,6 +99,7 @@ def get_agent() -> QuickShowAgent:
     api_client = QuickShowAPI(
         backend_url,
         display_timezone=display_timezone,
+        service_secret=os.getenv("AI_SERVICE_SECRET", ""),
     )
     return QuickShowAgent(
         api=api_client,
@@ -107,7 +122,10 @@ def chat(request: ChatRequest) -> ChatResponse:
     conversation = [message.model_dump() for message in request.messages]
 
     try:
-        reply = get_agent().reply(conversation)
+        result = get_agent().reply_with_action(
+            conversation,
+            user_id=request.user_id,
+        )
     except Exception as error:
         logger.exception("QuickShow agent request failed", exc_info=error)
         raise HTTPException(
@@ -115,4 +133,4 @@ def chat(request: ChatRequest) -> ChatResponse:
             detail="The AI assistant could not complete the request.",
         ) from error
 
-    return ChatResponse(reply=reply)
+    return ChatResponse(reply=result.reply, action=result.action)

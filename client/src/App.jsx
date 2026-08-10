@@ -17,6 +17,7 @@ import ListBookings from './pages/admin/ListBookings'
 import { useAppContext } from './context/AppContext'
 import { SignIn } from '@clerk/react'
 import Loading from './components/Loading'
+import AIChatWidget from './components/AIChatWidget'
 
 const App = () => {
 
@@ -53,6 +54,7 @@ const App = () => {
           <Route path="list-bookings" element={<ListBookings/>} />
         </Route>
       </Routes>
+      {!isAdminRoute && <AIChatWidget />}
       {!isAdminRoute && <Footer />}
     </>
   )

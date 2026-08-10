@@ -1,5 +1,7 @@
 import json
 import re
+from contextvars import ContextVar
+from dataclasses import dataclass
 from typing import Any
 
 from groq import BadRequestError
@@ -19,21 +21,38 @@ Rules:
 - Use search_playing_movies for discovery, filtering, recommendations, or listings.
 - Use get_movie_details when the user asks for details or show dates/times for one movie.
 - Use get_available_seats only after identifying one exact show ID and the user's preferred row.
+- Use prepare_booking only after the user has chosen one exact show and 1-5 specific seats that were reported available.
+- Use get_recent_bookings when the signed-in user asks for their recent bookings or payment status. It returns at most the newest three bookings for only that authenticated user.
 - Providing read-only seat availability is allowed and required; never refuse an availability request.
-- A previous booking request does not block a later availability request. Refuse only the booking action itself.
+- A previous booking request does not block a later availability request.
 - If a title is given but its ID is unknown, search first and then fetch its details.
+- Treat movie IDs, show IDs, booking IDs, and all other backend identifiers as internal data.
+- Use identifiers silently for tool calls, but never display them to the user or include them in tables, lists, or headings. Identify movies by title and shows by date/time instead.
 - Showtimes returned by tools are already converted to their labelled timezone; never convert them again.
 - If the showtime or row is ambiguous, ask the user to choose before checking seats.
 - Seat availability is live but does not reserve or hold seats; always make that clear.
 - Clearly say when no matching movie exists or when the backend has no information.
-- You may list vacant seats, but do not select them, hold them, create bookings, authenticate users, or perform admin operations.
+- You may list vacant seats and prepare a booking draft, but do not select seats for the user, hold seats, create bookings, authenticate users, or perform admin operations.
+- After preparing a valid draft, summarize the movie, showtime, and chosen seats without exposing identifiers, clearly say seats are not held, and ask the user to type exactly BOOK to continue.
+- Never claim a booking or payment is confirmed; only the application can confirm it after the explicit BOOK step.
+- For booking history, report payment_paid exactly as true or false and never expose booking, movie, show, or user identifiers.
 - Keep answers easy to scan and recommend only movies returned by the tools.
 """
+
+
+@dataclass(frozen=True)
+class AgentResult:
+    reply: str
+    action: dict[str, Any] | None = None
 
 
 class QuickShowAgent:
     def __init__(self, api: QuickShowAPI, api_key: str, model: str) -> None:
         self.api = api
+        self._user_id_context: ContextVar[str | None] = ContextVar(
+            "quickshow_authenticated_user_id",
+            default=None,
+        )
 
         @tool
         def search_playing_movies(
@@ -65,10 +84,27 @@ class QuickShowAgent:
             availability = self.api.get_available_seats(show_id, row)
             return json.dumps(availability, ensure_ascii=False)
 
+        @tool
+        def prepare_booking(show_id: str, selected_seats: list[str]) -> str:
+            """Validate 1-5 user-selected seats for one exact show and prepare a read-only booking draft. This does not hold seats, create a booking, or start payment."""
+            draft = self.api.prepare_booking(show_id, selected_seats)
+            return json.dumps(draft, ensure_ascii=False)
+
+        @tool
+        def get_recent_bookings() -> str:
+            """Get up to the three newest bookings and true/false payment status for the currently authenticated QuickShow user only."""
+            user_id = self._user_id_context.get()
+            if not user_id:
+                raise RuntimeError("Sign in through QuickShow to view bookings.")
+            bookings = self.api.get_recent_bookings(user_id)
+            return json.dumps(bookings, ensure_ascii=False)
+
         self.tools = [
             search_playing_movies,
             get_movie_details,
             get_available_seats,
+            prepare_booking,
+            get_recent_bookings,
         ]
         self.tools_by_name = {item.name: item for item in self.tools}
         self.base_model = ChatGroq(
@@ -83,8 +119,39 @@ class QuickShowAgent:
             parallel_tool_calls=False,
         )
 
-    def reply(self, conversation: list[dict[str, str]]) -> str:
+    def reply(
+        self,
+        conversation: list[dict[str, str]],
+        user_id: str | None = None,
+    ) -> str:
+        return self.reply_with_action(conversation, user_id=user_id).reply
+
+    def reply_with_action(
+        self,
+        conversation: list[dict[str, str]],
+        user_id: str | None = None,
+    ) -> AgentResult:
+        context_token = self._user_id_context.set(user_id)
+        try:
+            return self._generate_reply(
+                conversation,
+                has_authenticated_user=bool(user_id),
+            )
+        finally:
+            self._user_id_context.reset(context_token)
+
+    def _generate_reply(
+        self,
+        conversation: list[dict[str, str]],
+        has_authenticated_user: bool,
+    ) -> AgentResult:
         messages: list[Any] = [SystemMessage(content=SYSTEM_PROMPT)]
+        messages.append(SystemMessage(content=(
+            "An authenticated QuickShow user is available for user-scoped tools."
+            if has_authenticated_user
+            else "No authenticated user is available; do not call user-scoped tools."
+        )))
+        pending_action: dict[str, Any] | None = None
 
         for message in conversation[-12:]:
             content = message.get("content", "")
@@ -107,13 +174,26 @@ class QuickShowAgent:
             messages.append(response)
 
             if not response.tool_calls:
-                return self._content_as_text(response.content)
+                return AgentResult(
+                    reply=self._content_as_text(response.content),
+                    action=pending_action,
+                )
 
             for tool_call in response.tool_calls:
                 selected_tool = self.tools_by_name.get(tool_call["name"])
                 if selected_tool is None:
                     raise RuntimeError("The model requested an unsupported tool.")
-                messages.append(selected_tool.invoke(tool_call))
+                tool_message = selected_tool.invoke(tool_call)
+                if tool_call["name"] == "get_recent_bookings":
+                    return AgentResult(
+                        reply=self._format_recent_bookings(tool_message.content),
+                        action=pending_action,
+                    )
+                messages.append(tool_message)
+                if tool_call["name"] == "prepare_booking":
+                    pending_action = self._parse_booking_action(
+                        tool_message.content
+                    )
 
         raise RuntimeError("The assistant exceeded its tool-call limit. Please rephrase.")
 
@@ -121,7 +201,7 @@ class QuickShowAgent:
         self,
         error: BadRequestError,
         messages: list[Any],
-    ) -> str | None:
+    ) -> AgentResult | None:
         parsed_call = self._parse_failed_tool_call(error.body)
         if parsed_call is None:
             return None
@@ -135,6 +215,9 @@ class QuickShowAgent:
             tool_result = selected_tool.invoke(arguments)
         except Exception:
             return None
+
+        if tool_name == "get_recent_bookings":
+            return AgentResult(reply=self._format_recent_bookings(tool_result))
 
         recovery_messages = [
             *messages,
@@ -150,7 +233,64 @@ class QuickShowAgent:
             ),
         ]
         response = self.base_model.invoke(recovery_messages)
-        return self._content_as_text(response.content)
+        action = None
+        if tool_name == "prepare_booking":
+            action = self._parse_booking_action(tool_result)
+        return AgentResult(
+            reply=self._content_as_text(response.content),
+            action=action,
+        )
+
+    @staticmethod
+    def _format_recent_bookings(content: Any) -> str:
+        try:
+            bookings = json.loads(str(content))
+        except (TypeError, json.JSONDecodeError) as error:
+            raise RuntimeError("The recent bookings response was invalid.") from error
+
+        if not isinstance(bookings, list):
+            raise RuntimeError("The recent bookings response was invalid.")
+        if not bookings:
+            return "You do not have any recent bookings."
+
+        lines = ["### Your recent bookings"]
+        for index, booking in enumerate(bookings[:3], start=1):
+            if not isinstance(booking, dict):
+                continue
+            show = booking.get("show") if isinstance(booking.get("show"), dict) else {}
+            movie_title = str(booking.get("movie_title") or "Unknown movie")
+            seats = booking.get("seats") if isinstance(booking.get("seats"), list) else []
+            payment_status = "true" if booking.get("payment_paid") is True else "false"
+
+            lines.extend([
+                f"{index}. **{movie_title}**",
+                f"   - Showtime: {show.get('date', '')} at {show.get('time', '')} ({show.get('timezone', '')})",
+                f"   - Seats: {', '.join(str(seat) for seat in seats) or 'Not available'}",
+                f"   - Payment: **{payment_status}**",
+            ])
+
+        return "\n".join(lines)
+
+    @staticmethod
+    def _parse_booking_action(content: Any) -> dict[str, Any]:
+        try:
+            payload = json.loads(str(content))
+        except (TypeError, json.JSONDecodeError) as error:
+            raise RuntimeError("The booking draft was invalid.") from error
+
+        if (
+            not isinstance(payload, dict)
+            or payload.get("type") != "booking_draft"
+            or not isinstance(payload.get("show_id"), str)
+            or not isinstance(payload.get("selected_seats"), list)
+        ):
+            raise RuntimeError("The booking draft was invalid.")
+
+        return {
+            "type": "booking_draft",
+            "showId": payload["show_id"],
+            "selectedSeats": payload["selected_seats"],
+        }
 
     @staticmethod
     def _parse_failed_tool_call(

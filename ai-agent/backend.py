@@ -16,10 +16,12 @@ class QuickShowAPI:
         base_url: str,
         timeout: int = 15,
         display_timezone: str = "Asia/Kolkata",
+        service_secret: str = "",
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
         self.display_timezone_name = display_timezone
+        self.service_secret = service_secret.strip()
         try:
             self.display_timezone = ZoneInfo(display_timezone)
         except ZoneInfoNotFoundError as error:
@@ -31,11 +33,13 @@ class QuickShowAPI:
         self,
         path: str,
         params: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
     ) -> dict[str, Any]:
         try:
             response = requests.get(
                 f"{self.base_url}{path}",
                 params=params,
+                headers=headers,
                 timeout=self.timeout,
             )
             response.raise_for_status()
@@ -51,6 +55,35 @@ class QuickShowAPI:
         if not payload.get("success"):
             raise RuntimeError(payload.get("message", "QuickShow request failed."))
         return payload
+
+    def get_recent_bookings(self, user_id: str) -> list[dict[str, Any]]:
+        if not re.fullmatch(r"user_[A-Za-z0-9]+", user_id or ""):
+            raise RuntimeError("Authenticated user context is unavailable.")
+        if not self.service_secret:
+            raise RuntimeError("AI service authentication is not configured.")
+
+        payload = self._get(
+            "/api/ai/internal/recent-bookings",
+            headers={
+                "X-AI-Service-Key": self.service_secret,
+                "X-QuickShow-User-Id": user_id,
+            },
+        )
+
+        recent_bookings = []
+        for booking in payload.get("bookings", [])[:3]:
+            show_datetime = self._format_show_datetime(
+                str(booking.get("showDateTime", ""))
+            )
+            recent_bookings.append(
+                {
+                    "movie_title": booking.get("movieTitle", "Unknown movie"),
+                    "show": show_datetime,
+                    "seats": booking.get("seats", []),
+                    "payment_paid": bool(booking.get("isPaid", False)),
+                }
+            )
+        return recent_bookings
 
     def get_playing_movies(self) -> list[dict[str, Any]]:
         payload = self._get("/api/show/all-shows")
@@ -171,6 +204,50 @@ class QuickShowAPI:
             "availability_is_live": True,
             "notice": (
                 "These seats are not held and may become unavailable before booking."
+            ),
+        }
+
+    def prepare_booking(
+        self,
+        show_id: str,
+        selected_seats: list[str],
+    ) -> dict[str, Any]:
+        safe_show_id = show_id.strip()
+        if not re.fullmatch(r"[0-9a-fA-F]{24}", safe_show_id):
+            raise RuntimeError("A valid show ID is required.")
+        if not isinstance(selected_seats, list):
+            raise RuntimeError("Selected seats must be a list.")
+
+        normalized_seats = [str(seat).strip().upper() for seat in selected_seats]
+        if not 1 <= len(normalized_seats) <= 5:
+            raise RuntimeError("Choose between 1 and 5 seats.")
+        if len(set(normalized_seats)) != len(normalized_seats):
+            raise RuntimeError("Selected seats must be unique.")
+        if any(not re.fullmatch(r"[A-J][1-9]", seat) for seat in normalized_seats):
+            raise RuntimeError("Each seat must use the format A1 through J9.")
+
+        unavailable_seats = []
+        for row in sorted({seat[0] for seat in normalized_seats}):
+            availability = self.get_available_seats(safe_show_id, row)
+            available_seats = set(availability.get("available_seats", []))
+            unavailable_seats.extend(
+                seat for seat in normalized_seats
+                if seat[0] == row and seat not in available_seats
+            )
+
+        if unavailable_seats:
+            raise RuntimeError(
+                f"These seats are no longer available: {', '.join(unavailable_seats)}"
+            )
+
+        return {
+            "type": "booking_draft",
+            "show_id": safe_show_id,
+            "selected_seats": normalized_seats,
+            "seat_count": len(normalized_seats),
+            "availability_is_live": True,
+            "notice": (
+                "This is only a draft. Seats are not held until booking begins."
             ),
         }
 
