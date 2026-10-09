@@ -36,3 +36,5 @@ dist-ssr
 *.zip
 
 package-lock.json
+
+server/ps.txt
