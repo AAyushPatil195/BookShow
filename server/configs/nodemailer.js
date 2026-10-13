@@ -1,4 +1,6 @@
 import nodemailer from 'nodemailer'
+import { assertExternalServicesAllowed } from './environment.js';
+assertExternalServicesAllowed();
 
 // Create a transporter using SMTP
 const transporter = nodemailer.createTransport({

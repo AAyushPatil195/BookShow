@@ -1,4 +1,6 @@
 import { Kafka, logLevel } from "kafkajs";
+import { assertExternalServicesAllowed } from './environment.js';
+assertExternalServicesAllowed();
 
 const brokers = (process.env.KAFKA_BROKERS || "localhost:9092")
     .split(",")

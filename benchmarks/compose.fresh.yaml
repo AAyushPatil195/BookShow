@@ -1,0 +1,8 @@
+# Optional fresh-volume validation without competing for host ports.
+services:
+  api:
+    ports: !reset []
+  mongo:
+    ports: !reset []
+  redis:
+    ports: !reset []

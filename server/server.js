@@ -1,38 +1,79 @@
+import { isBenchmark, benchmarkEnvironment } from './configs/environment.js';
 import express from 'express';
 import cors from 'cors';
-import 'dotenv/config';
 import connectDB from './configs/db.js';
-import { clerkMiddleware } from '@clerk/express';
-import { serve } from "inngest/express";
-import { inngest, functions } from "./inngest/index.js";
-import showRouter from './routes/showRoutes.js';
 import bookingRouter from './routes/bookingRoutes.js';
-import adminRouter from './routes/adminRoutes.js';
-import userRouter from './routes/userRoutes.js';
-import { stripeWebhook } from './controllers/stripeWebhook.js';
 import { apiRateLimiter } from './middleware/rateLimiter.js';
+import redis, { validateBenchmarkRedis } from './configs/redis.js';
+import mongoose from 'mongoose';
 
 const app = express();
 const port = 3000;
 
 await connectDB();
+await validateBenchmarkRedis();
 
 // Stripe webhooks route
-app.use('/api/stripe', express.raw({type: 'application/json'}), stripeWebhook)
+if (!isBenchmark) {
+    const { stripeWebhook } = await import('./controllers/stripeWebhook.js');
+    app.use('/api/stripe', express.raw({type: 'application/json'}), stripeWebhook);
+}
 
 // MiddleWares
 app.use(express.json()) // To parse all requests using JSON method
 app.use(cors())
-app.use(clerkMiddleware())
+if (isBenchmark) {
+    // Browser-origin requests cannot use synthetic authentication.
+    app.use((req, res, next) => {
+        if (req.headers.origin) return res.status(403).json({ success: false, message: 'Benchmark rejects browser origins' });
+        next();
+    });
+    app.use((req, res, next) => {
+        // Only for isolated local benchmarks.
+        req.auth = () => ({
+            userId: "benchmark-user"
+        });
+        next();
+    });
+} else {
+    const { clerkMiddleware } = await import('@clerk/express');
+    app.use(clerkMiddleware());
+}
 
 // API Routes
 app.get('/', (req, res)=> res.send('Hello, Server is live !!!'))
-app.use("/api/inngest", serve({ client: inngest, functions }));
-app.use('/api/show', apiRateLimiter, showRouter);
 app.use('/api/booking', apiRateLimiter, bookingRouter);
-// admin
-app.use('/api/admin', apiRateLimiter, adminRouter);
-// user
-app.use('/api/user', apiRateLimiter, userRouter)
+if (isBenchmark) {
+    const { getAllShows } = await import('./controllers/showController.js');
+    app.get('/api/show/all-shows', getAllShows);
+    app.get('/health', async (req, res) => {
+        try {
+            await mongoose.connection.db.admin().command({ ping: 1 });
+            await redis.ping();
+            res.json({ benchmark: true, database: 'bookshow_benchmark', cacheMode: process.env.BENCHMARK_CACHE_MODE || 'enabled' });
+        } catch {
+            res.status(503).json({ success: false });
+        }
+    });
+    app.use((req, res) => res.status(404).json({ success: false, message: 'Route disabled in benchmark mode' }));
+} else {
+    const [show, admin, user, { serve }, { inngest, functions }] = await Promise.all([
+        import('./routes/showRoutes.js'), import('./routes/adminRoutes.js'), import('./routes/userRoutes.js'),
+        import('inngest/express'), import('./inngest/index.js')
+    ]);
+    app.use('/api/inngest', serve({ client: inngest, functions }));
+    app.use('/api/show', apiRateLimiter, show.default);
+    app.use('/api/admin', apiRateLimiter, admin.default);
+    app.use('/api/user', apiRateLimiter, user.default);
+}
 
-app.listen(port, ()=> console.log(`Server is listening at http://localhost:${port}`))
+const host = isBenchmark ? (benchmarkEnvironment.container ? '0.0.0.0' : '127.0.0.1') : undefined;
+const server = app.listen(port, host, () => console.log(`Server is listening on ${host || '*'}:${port}`));
+if (isBenchmark) {
+    const shutdown = () => server.close(async () => {
+        await mongoose.disconnect();
+        await redis.quit();
+    });
+    process.once('SIGINT', shutdown);
+    process.once('SIGTERM', shutdown);
+}

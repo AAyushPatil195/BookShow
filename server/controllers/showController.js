@@ -3,10 +3,13 @@ import Movie from '../models/Movie.js';
 import Show from '../models/Show.js';
 
 import redis, { CACHE_KEYS } from "../configs/redis.js";
+import { isBenchmark, assertExternalServicesAllowed } from '../configs/environment.js';
+const cacheMode = isBenchmark ? (process.env.BENCHMARK_CACHE_MODE || 'enabled') : 'enabled';
 
 // API to get now playing movies from TMDB API
 export const getNowPlayingMovies = async (req, res) => {
     try {
+        assertExternalServicesAllowed();
         const { data } = await axios.get
         ('https://api.themoviedb.org/3/movie/now_playing', 
             {
@@ -26,6 +29,7 @@ export const getNowPlayingMovies = async (req, res) => {
 // API to add new show to DB
 export const addShow = async (req, res) => {
     try {
+        assertExternalServicesAllowed();
         const {movieId, showsInput, showPrice} = req.body;
         if(!movieId || !showPrice){
             return res.json({success: false, message: 'Movie data is missing'})
@@ -123,13 +127,13 @@ export const getAllShows = async (req, res) => {
     try {
         // 1. Try Redis first
         try {
-            const cachedShows = await redis.get(CACHE_KEYS.UPCOMING_SHOWS);
+            const cachedShows = cacheMode === 'enabled' ? await redis.get(CACHE_KEYS.UPCOMING_SHOWS) : null;
 
             if (cachedShows) {
                 res.set("X-Cache", "HIT");
                 return res.json({
                     success: true,
-                    shows: cachedShows
+                    shows: isBenchmark ? JSON.parse(cachedShows) : cachedShows
                 });
             }
         } catch (redisError) {
@@ -154,23 +158,32 @@ export const getAllShows = async (req, res) => {
 
         // 3. Cache for five minutes
         try {
-            await redis.set(
-                CACHE_KEYS.UPCOMING_SHOWS,
-                uniqueShows,
-                { ex: 300 }
-            );
+            if (isBenchmark && cacheMode !== 'disabled') {
+                await redis.set(
+                    CACHE_KEYS.UPCOMING_SHOWS,
+                    JSON.stringify(uniqueShows),
+                    "EX",
+                    300
+                );
+            } else if (!isBenchmark) {
+                await redis.set(
+                    CACHE_KEYS.UPCOMING_SHOWS,
+                    uniqueShows,
+                    { ex: 300 }
+                );
+            }
         } catch (redisError) {
             console.warn("Redis write failed:", redisError.message);
         }
 
-        res.set("X-Cache", "MISS");
+        res.set("X-Cache", cacheMode === 'disabled' ? 'BYPASS' : 'MISS');
         return res.json({
             success: true,
             shows: uniqueShows
         });
     } catch (error) {
         console.error(error);
-        return res.json({
+        return res.status(isBenchmark ? 500 : 200).json({
             success: false,
             message: error.message
         });

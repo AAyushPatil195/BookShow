@@ -1,5 +1,6 @@
 import { Ratelimit } from "@upstash/ratelimit";
 import redis from "../configs/redis.js";
+import { isBenchmark } from '../configs/environment.js';
 
 const getClientIp = (req) => {
     const forwardedFor = req.headers["x-forwarded-for"];
@@ -21,6 +22,9 @@ const getIdentifier = (req) => {
 };
 
 const createRateLimiter = ({ requests, window, prefix }) => {
+    if (isBenchmark) {
+        return (req, res, next) => next();
+    }
     const ratelimit = new Ratelimit({
         redis,
         limiter: Ratelimit.slidingWindow(requests, window),

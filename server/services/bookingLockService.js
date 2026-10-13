@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto";
 import redis from "../configs/redis.js";
+import { isBenchmark } from '../configs/environment.js';
 
-const BOOKING_LOCK_TTL_SECONDS = 15;
+export const BOOKING_LOCK_TTL_SECONDS = 15;
 
 const getBookingLockKey = (showId) => {
     return `booking-lock:${showId}`;
@@ -16,7 +17,9 @@ export const acquireBookingLock = async (showId) => {
     const key = getBookingLockKey(showId);
     const token = randomUUID();
 
-    const result = await redis.set(key, token, {
+    const result = isBenchmark
+    ? await redis.set(key, token, "EX", BOOKING_LOCK_TTL_SECONDS, "NX")
+    : await redis.set(key, token, {
         nx: true,
         ex: BOOKING_LOCK_TTL_SECONDS
     });
@@ -43,11 +46,9 @@ export const releaseBookingLock = async (lock) => {
         end
     `;
 
-    const result = await redis.eval(
-        releaseScript,
-        [lock.key],
-        [lock.token]
-    );
+    const result = isBenchmark
+    ? await redis.eval(releaseScript, 1, lock.key, lock.token)
+    : await redis.eval(releaseScript, [lock.key], [lock.token]);
 
     return Number(result) === 1;
 };

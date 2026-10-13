@@ -1,0 +1,95 @@
+
+name: quickshow-benchmark
+
+services:
+  
+  api:
+    build:
+      context: ./server
+    image: quickshow-benchmark-api:local
+    ports:
+      - "127.0.0.1:${BENCHMARK_API_PORT:-3001}:3000"
+    environment:
+      NODE_ENV: test
+      MONGODB_URI: mongodb://mongo:27017
+      BENCHMARK_MODE: "true"
+      BENCHMARK_CONTAINER: "true"
+      BENCHMARK_CACHE_MODE: ${BENCHMARK_CACHE_MODE:-enabled}
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mongo-init:
+        condition: service_completed_successfully
+    networks: [benchmark, localhost]
+    volumes:
+      - ./benchmarks:/benchmarks
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    profiles:
+      - api
+
+  mongo:
+    image: mongo:7
+    command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
+    ports:
+      - "127.0.0.1:27018:27017"
+    volumes:
+      - benchmark-mongo-data:/data/db
+    networks: [benchmark, localhost]
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "quit(db.hello().isWritablePrimary ? 0 : 1)"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  mongo-init:
+    image: mongo:7
+    depends_on:
+      mongo:
+        condition: service_started
+    networks: [benchmark]
+    volumes:
+      - ./benchmarks/mongo-init.js:/mongo-init.js:ro
+    entrypoint: ["mongosh", "--quiet", "--nodb", "/mongo-init.js"]
+    restart: "no"
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "127.0.0.1:6380:6379"
+    networks: [benchmark, localhost]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  k6:
+    image: grafana/k6:1.6.0
+    profiles: [tools]
+    networks: [benchmark]
+    volumes:
+      - ./benchmarks:/benchmarks
+    working_dir: /benchmarks
+    environment:
+      K6_NO_USAGE_REPORT: "true"
+      K6_WEB_DASHBOARD: "false"
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  benchmark-mongo-data:
+
+networks:
+  benchmark:
+    internal: true
+  localhost:
+    driver: bridge
