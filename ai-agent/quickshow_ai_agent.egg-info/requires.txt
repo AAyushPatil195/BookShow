@@ -1,0 +1,10 @@
+streamlit<2.0,>=1.57
+langchain-core<2.0,>=1.0
+langchain-groq<2.0,>=1.0
+groq<1.0,>=0.37
+fastapi<1.0,>=0.115
+pydantic<3.0,>=2.10
+requests<3.0,>=2.32
+python-dotenv<2.0,>=1.0
+tzdata<2027.0,>=2025.2
+uvicorn[standard]<1.0,>=0.30

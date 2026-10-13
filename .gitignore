@@ -33,3 +33,14 @@ dist-ssr
 *.zip
 
 package-lock.json
+
+# Python
+**/.venv/
+**/venv/
+**/__pycache__/
+*.pyc
+
+# Secrets
+.env
+.env.*
+!.env.example

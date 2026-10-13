@@ -1,0 +1,11 @@
+README.md
+agent.py
+api.py
+app.py
+backend.py
+pyproject.toml
+quickshow_ai_agent.egg-info/PKG-INFO
+quickshow_ai_agent.egg-info/SOURCES.txt
+quickshow_ai_agent.egg-info/dependency_links.txt
+quickshow_ai_agent.egg-info/requires.txt
+quickshow_ai_agent.egg-info/top_level.txt
